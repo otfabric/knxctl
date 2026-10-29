@@ -18,7 +18,9 @@ type answerResult struct {
 	Answered int    `json:"answered"`
 }
 
-func (r answerResult) Text() string { return fmt.Sprintf("answered %d reads of %s", r.Answered, r.Group) }
+func (r answerResult) Text() string {
+	return fmt.Sprintf("answered %d reads of %s", r.Answered, r.Group)
+}
 
 func newGroupAnswerCmd(a *app) *cobra.Command {
 	var lf linkFlags
@@ -68,7 +70,7 @@ group: use it on test installations and simulators.`,
 			if err != nil {
 				return err
 			}
-			defer c.Close()
+			defer func() { _ = c.Close() }()
 			sub := c.Subscribe(64, g)
 			a.warn("answering reads of %s via %s", g, via(&lf))
 			res := answerResult{Group: g.String()}

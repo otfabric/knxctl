@@ -1,0 +1,12 @@
+# Codecov configuration for knxctl. CI uploads the whole-module profile of
+# the Linux multicast job (KNX_REQUIRE_MULTICAST=1: the routing tests run),
+# the metric `make coverage` gates at 85 %.
+coverage:
+  status:
+    project:
+      default:
+        target: 85%
+        threshold: 1%
+    patch:
+      default:
+        target: 70%

@@ -51,12 +51,12 @@ func newGroupWriteCmd(a *app, respond bool) *cobra.Command {
 	var lf linkFlags
 	var dptID, raw string
 	var small bool
-	use, short, svc := "write group value", "Send A_GroupValue_Write (transmits a telegram)", "write"
+	use, short, svc := "write group [value]", "Send A_GroupValue_Write (transmits a telegram)", "write"
 	example := `  knxctl group write 1/2/3 on --gateway 192.168.1.10
   knxctl group write 1/2/4 21.5 --dpt 9.001 --gateway 192.168.1.10
   knxctl group write 1/2/5 --raw 0C33 --routing --source 1.1.250`
 	if respond {
-		use, short, svc = "respond group value", "Send A_GroupValue_Response (transmits a telegram)", "response"
+		use, short, svc = "respond group [value]", "Send A_GroupValue_Response (transmits a telegram)", "response"
 		example = "  knxctl group respond 1/2/4 21.5 --dpt 9.001 --gateway 192.168.1.10"
 	}
 	cmd := &cobra.Command{
@@ -95,7 +95,7 @@ func newGroupWriteCmd(a *app, respond bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer c.Close()
+			defer func() { _ = c.Close() }()
 			if respond {
 				err = c.GroupRespond(ctx, g, gv)
 			} else {
@@ -108,7 +108,7 @@ func newGroupWriteCmd(a *app, respond bool) *cobra.Command {
 			if ty != nil {
 				r.DPT = ty.ID.String()
 			}
-			return a.emit("group "+svc, r)
+			return a.emit("group "+strings.Fields(use)[0], r)
 		},
 	}
 	lf.add(cmd)
@@ -165,7 +165,7 @@ every response during the given window.`,
 			if err != nil {
 				return err
 			}
-			defer c.Close()
+			defer func() { _ = c.Close() }()
 			res := readResult{Group: g.String(), Responses: []telegramRecord{}}
 			if all > 0 {
 				rs, err := c.GroupReadAll(ctx, g, all)
@@ -176,7 +176,8 @@ every response during the given window.`,
 					res.Responses = append(res.Responses, newTelegramRecord(r.Telegram, ty))
 				}
 				if len(rs) == 0 {
-					_ = a.emit("group read", res)
+					// One fatal error, not a result and then an error
+					// document (two JSON documents on stdout).
 					return errs.New(errs.KindTimeout, errs.CodeNoResponse, "no response to the read of %s within %v", g, all)
 				}
 				return a.emit("group read", res)
@@ -210,7 +211,7 @@ func listen(ctx context.Context, a *app, lf *linkFlags, groups []knx.GroupAddres
 	if err != nil {
 		return err
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	sub := c.Subscribe(1024, groups...)
 	a.warn("listening via %s (Ctrl-C to stop)", via(lf))
 	st := a.stream()

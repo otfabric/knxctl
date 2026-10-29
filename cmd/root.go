@@ -52,12 +52,19 @@ func formatOf(args []string) output.Format {
 	v := os.Getenv("KNXCTL_FORMAT")
 	for i, a := range args {
 		switch {
+		case a == "--":
+			// Arguments after -- are not flags.
+			return parseFormat(v)
 		case a == "--format" && i+1 < len(args):
 			v = args[i+1]
 		case strings.HasPrefix(a, "--format="):
 			v = strings.TrimPrefix(a, "--format=")
 		}
 	}
+	return parseFormat(v)
+}
+
+func parseFormat(v string) output.Format {
 	f, err := output.Parse(v)
 	if err != nil {
 		return output.Text
@@ -76,7 +83,8 @@ Passive by default: discover, describe, monitor, group listen, routing monitor,
 diagnose and the dpt and decode commands never send telegrams onto the KNX
 network (discover sends one search request; describe and diagnose talk only to
 the KNXnet/IP server). Commands that send telegrams are explicit: group write,
-group respond and group read (a read is a telegram the devices answer).
+group respond, group answer and group read (a read is a telegram the devices
+answer).
 
 A KNXnet/IP server is reached by tunnelling (--gateway host[:port], env
 KNXCTL_GATEWAY) or the KNX IP network by routing (--routing, multicast
@@ -181,11 +189,24 @@ func Run(ctx context.Context, args []string, in io.Reader, out, errOut io.Writer
 		_ = output.WriteError(out, e)
 	} else {
 		_, _ = fmt.Fprintf(errOut, "error: %s\n", e.Message)
+		if strings.Contains(e.Message, "unknown shorthand flag") && negativeArg(args) {
+			_, _ = fmt.Fprintln(errOut, "A negative value is read as a flag: put -- before the arguments, for example knxctl group write --dpt 9.001 -g host -- 1/2/4 -30")
+		}
 		if e.Kind == errs.KindUsage {
 			_, _ = fmt.Fprintln(errOut, "Run 'knxctl --help' for usage.")
 		}
 	}
 	return errs.ExitCode(e.Kind)
+}
+
+// negativeArg reports an argument that looks like a negative number.
+func negativeArg(args []string) bool {
+	for _, a := range args {
+		if len(a) > 1 && a[0] == '-' && (a[1] >= '0' && a[1] <= '9' || a[1] == '.') {
+			return true
+		}
+	}
+	return false
 }
 
 // isUsage recognises cobra's own errors about the command line.

@@ -38,6 +38,9 @@ type objectConfig struct {
 	Value  string   `json:"value,omitempty"`
 }
 
+// defaultFlags are the flags of an object that gives none.
+const defaultFlags = "CRWU"
+
 // parseObject parses --object group[+group...]:dpt[:flags][=value].
 func parseObject(s string) (objectConfig, error) {
 	spec, value, _ := strings.Cut(s, "=")
@@ -45,7 +48,7 @@ func parseObject(s string) (objectConfig, error) {
 	if len(parts) < 2 || len(parts) > 3 {
 		return objectConfig{}, errs.Invalid("--object %q: want group[+group]:dpt[:flags][=value]", s)
 	}
-	o := objectConfig{Name: parts[0], DPT: parts[1], Flags: "CRWU", Groups: strings.Split(parts[0], "+"), Value: value}
+	o := objectConfig{Name: parts[0], DPT: parts[1], Flags: defaultFlags, Groups: strings.Split(parts[0], "+"), Value: value}
 	if len(parts) == 3 {
 		o.Flags = parts[2]
 	}
@@ -59,6 +62,9 @@ func buildDevice(dc deviceConfig) (*device.Device, error) {
 	}
 	d := device.New(dc.Name, ia)
 	for _, oc := range dc.Objects {
+		if oc.Flags == "" {
+			oc.Flags = defaultFlags // as for --object; no flags would leave the object unlinked
+		}
 		o, err := device.NewGroupObject(oc.Name, oc.DPT, oc.Flags, oc.Groups...)
 		if err != nil {
 			return nil, errs.Invalid("object %q: %v", oc.Name, err)

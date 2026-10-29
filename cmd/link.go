@@ -53,7 +53,10 @@ func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
 	case l.routing && l.gateway != "":
 		return nil, errs.Invalid("--gateway and --routing exclude each other")
 	case l.routing:
-		ropts := []routing.Option{routing.WithGroup(l.group), routing.WithLogger(a.logger)}
+		// Loopback on: other knxctl processes, simulators and routers on
+		// this host hear our telegrams and we theirs (the connection drops
+		// its own echoes).
+		ropts := []routing.Option{routing.WithGroup(l.group), routing.WithLogger(a.logger), routing.WithLoopback(true)}
 		if a.iface != "" {
 			ropts = append(ropts, routing.WithInterface(a.iface))
 		}
@@ -136,8 +139,9 @@ func serviceName(s apdu.APCI) string {
 		return "response"
 	case apdu.GroupValueWriteService:
 		return "write"
+	default:
+		return s.String()
 	}
-	return s.String()
 }
 
 func newTelegramRecord(t client.Telegram, ty *dpt.Type) telegramRecord {
