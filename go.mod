@@ -3,7 +3,7 @@ module github.com/otfabric/knxctl
 go 1.23
 
 require (
-	github.com/otfabric/go-knx v0.0.0-20261029180538-07d850e467f2
+	github.com/otfabric/go-knx v0.0.0-20261029181331-7f48fe71f603
 	github.com/spf13/cobra v1.10.2
 )
 
