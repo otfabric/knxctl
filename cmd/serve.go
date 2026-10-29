@@ -303,6 +303,16 @@ func serveSecure(sec *secureFlags, users []string, host string, cfg *serveConfig
 				devPassword = itf.Authentication
 			}
 		}
+		if d := kr.Device(hostIA); d != nil && d.ManagementPassword != "" && len(su) > 0 {
+			k, err := secure.UserPasswordKey(d.ManagementPassword)
+			if err != nil {
+				return nil, nil, errs.Invalid("keyring device %s: %v", hostIA, err)
+			}
+			su[1] = server.SecureUser{Key: k} // the management user
+			if d.Authentication != "" {
+				devPassword = d.Authentication
+			}
+		}
 		if len(su) == 0 {
 			return nil, keys, nil // a keyring for Data Secure only
 		}

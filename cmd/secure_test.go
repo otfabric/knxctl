@@ -20,7 +20,8 @@ func secureOption(t *testing.T) server.Option {
 	dev, _ := secure.DeviceAuthenticationCode("dev")
 	u2, _ := secure.UserPasswordKey("pw2")
 	u3, _ := secure.UserPasswordKey("pw3")
-	return server.WithSecure(dev, map[uint8]server.SecureUser{2: {Key: u2, Address: tunnelAddrs[0]}, 3: {Key: u3, Address: tunnelAddrs[1]}})
+	u1, _ := secure.UserPasswordKey("pw1")
+	return server.WithSecure(dev, map[uint8]server.SecureUser{1: {Key: u1}, 2: {Key: u2, Address: tunnelAddrs[0]}, 3: {Key: u3, Address: tunnelAddrs[1]}})
 }
 
 // testKeyring writes a keyring matching secureOption: users 2 and 3 of
@@ -36,6 +37,7 @@ func testKeyring(t *testing.T) string {
 				Groups: map[knx.GroupAddress][]knx.IndividualAddress{g: {tunnelAddrs[0]}}},
 		},
 		GroupKeys: map[knx.GroupAddress]keyring.Key{g: {0x42}},
+		Devices:   []keyring.Device{{IndividualAddress: knx.MustParseIndividualAddress("1.1.0"), ManagementPassword: "pw1", Authentication: "dev"}},
 	}
 	b, err := kr.Encode("kpw")
 	if err != nil {
@@ -59,7 +61,8 @@ func TestSecureTunnelFlags(t *testing.T) {
 	want(t, run(t, "group", "write", "1/2/6", "1", "--dpt", "9.001", "--gateway", s.addr, "--user-id", "200", "--user-password", "x"), 3, "--user-id")
 	want(t, run(t, "group", "write", "1/2/6", "1", "--dpt", "9.001", "--gateway", s.addr, "--tcp"), 9, "E_CONNECTION_TYPE")
 	want(t, run(t, "tunnel", "connect", s.addr, "--user-id", "3", "--user-password", "pw3", "--format", "json"), 0, `"individualAddress": "`+tunnelAddrs[1].String()+`"`)
-	want(t, run(t, "property", "read", s.addr, "knxnetip", "76", "--count", "11", "--user-id", "2", "--user-password", "pw2"), 0, `"knxctl test"`)
+	want(t, run(t, "property", "read", s.addr, "knxnetip", "76", "--count", "11", "--user-id", "1", "--user-password", "pw1"), 0, `"knxctl test"`)
+	want(t, run(t, "property", "read", s.addr, "knxnetip", "76", "--user-id", "2", "--user-password", "pw2"), 9, "E_CONNECTION_TYPE")
 }
 
 func TestKeyringFlags(t *testing.T) {
@@ -72,6 +75,7 @@ func TestKeyringFlags(t *testing.T) {
 	want(t, run(t, "tunnel", "connect", s.addr, "--keyring", kr, "--keyring-password", "kpw", "--user-id", "3"), 0, tunnelAddrs[1].String())
 	want(t, run(t, "tunnel", "connect", s.addr, "--keyring", kr, "--keyring-password", "kpw", "--tunnel-address", tunnelAddrs[1].String()), 0, tunnelAddrs[1].String())
 	want(t, run(t, "tunnel", "connect", s.addr, "--keyring", kr, "--keyring-password", "kpw", "--user-id", "9"), 3, "not in the keyring")
+	want(t, run(t, "property", "read", s.addr, "knxnetip", "76", "--count", "11", "--keyring", kr, "--keyring-password", "kpw", "--user-id", "1"), 0, `"knxctl test"`)
 	want(t, run(t, "tunnel", "connect", s.addr, "--keyring", kr, "--keyring-password", "kpw", "--tunnel-address", "1.1.99"), 3, "no secure tunnelling interface")
 	want(t, run(t, "tunnel", "connect", s.addr, "--keyring", kr, "--keyring-password", "wrong"), 3, "signature")
 
@@ -112,6 +116,7 @@ func TestServeSecure(t *testing.T) {
 	addr = regexp.MustCompile(`serving on (\S+)`).FindStringSubmatch(b.errOut.String())[1]
 	want(t, run(t, "group", "write", "1/2/9", "21", "--dpt", "9.001", "--gateway", addr, "--keyring", kr, "--keyring-password", "kpw"), 0)
 	eventually(t, "the decrypted telegram", func() bool { return regexp.MustCompile(`1/2/9 .*write.*0C1A \[secure\]`).MatchString(b.out.String()) })
+	want(t, run(t, "property", "read", addr, "device", "11", "--keyring", kr, "--keyring-password", "kpw", "--user-id", "1"), 0)
 	b.stop(t)
 
 	for _, args := range [][]string{

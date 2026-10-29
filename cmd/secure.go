@@ -82,6 +82,13 @@ func (s *secureFlags) credentials(tunnelIA string) (*secure.Credentials, error) 
 					break
 				}
 			}
+			if itf == nil && s.userID == 1 {
+				// The management user is the host device's management
+				// password.
+				if c, ok, err := managementCredentials(kr); ok || err != nil {
+					return c, err
+				}
+			}
 			if itf == nil && s.userID != 0 {
 				return nil, errs.Invalid("--user-id %d: not in the keyring", s.userID)
 			}
@@ -151,4 +158,28 @@ func (s *secureFlags) tunnelOptions(opts []tunnel.Option, tunnelIA string) ([]tu
 		opts = append(opts, tunnel.WithSecure(*cred))
 	}
 	return opts, nil
+}
+
+// managementCredentials returns user 1 of the first tunnelling host of a
+// keyring: the host device's management password.
+func managementCredentials(kr *keyring.Keyring) (*secure.Credentials, bool, error) {
+	for _, itf := range kr.Interfaces {
+		if itf.Type != keyring.Tunneling || !itf.HasHost {
+			continue
+		}
+		d := kr.Device(itf.Host)
+		if d == nil || d.ManagementPassword == "" {
+			continue
+		}
+		auth := d.Authentication
+		if auth == "" {
+			auth = itf.Authentication
+		}
+		c, err := secure.NewCredentials(1, d.ManagementPassword, auth)
+		if err != nil {
+			return nil, false, errs.Invalid("keyring device %s: %v", d.IndividualAddress, err)
+		}
+		return &c, true, nil
+	}
+	return nil, false, nil
 }
