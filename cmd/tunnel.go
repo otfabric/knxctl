@@ -37,7 +37,7 @@ func (t tunnelResult) Text() string {
 func newTunnelCmd(a *app) *cobra.Command {
 	cmd := &cobra.Command{Use: "tunnel", Short: "KNXnet/IP tunnelling connections"}
 	var hold time.Duration
-	var nat bool
+	var nat, tcp bool
 	var heartbeat time.Duration
 	var ia string
 	connect := &cobra.Command{
@@ -52,6 +52,9 @@ is sent onto the KNX network.`,
 			opts := []tunnel.Option{tunnel.WithLogger(a.logger), tunnel.WithNAT(nat), tunnel.WithConnectTimeout(a.timeout), tunnel.WithHeartbeat(heartbeat, tunnel.DefaultHeartbeatTimeout, tunnel.DefaultHeartbeatAttempts)}
 			if a.local != "" {
 				opts = append(opts, tunnel.WithLocalAddr(a.local))
+			}
+			if tcp {
+				opts = append(opts, tunnel.WithTCP())
 			}
 			if ia != "" {
 				addr, err := knx.ParseIndividualAddress(ia)
@@ -81,6 +84,7 @@ is sent onto the KNX network.`,
 	connect.Flags().DurationVar(&hold, "hold", 0, "Keep the connection this long before disconnecting")
 	connect.Flags().DurationVar(&heartbeat, "heartbeat", tunnel.DefaultHeartbeatInterval, "Heartbeat interval while held")
 	connect.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (through NAT)")
+	connect.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP (KNXnet/IP core v2)")
 	connect.Flags().StringVar(&ia, "tunnel-address", "", "Request this tunnelling address (tunnelling v2 servers)")
 	cmd.AddCommand(connect)
 	return cmd

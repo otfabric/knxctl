@@ -6,6 +6,28 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.2.0
+
+**Date:** 2026-10-29
+**Previous release:** v0.1.1
+
+## Summary
+
+KNXnet/IP over TCP, busmonitor and device management, on go-knx v0.2.0.
+
+## Additions
+
+- `--tcp` on every tunnelling command (`group`, `monitor`, `tunnel
+  connect`, `busmonitor`, `property read`): KNXnet/IP over TCP.
+- `busmonitor host`: every bus frame through a busmonitor connection
+  (L_Busmon.ind), decoded from the TP1 frame; text or JSON Lines.
+- `property read host object pid`: interface object properties with local
+  device management (`--start`, `--count`, `--instance`); objects by type
+  number or `device`, `router`, `knxnetip`.
+- `serve --no-tcp` and `serve --concurrent-busmonitor`.
+
+---
+
 ## v0.1.1
 
 **Date:** 2026-10-29
