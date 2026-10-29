@@ -29,6 +29,7 @@ Usage:
   knxctl [command]
 
 Available Commands:
+  busmonitor  Monitor every frame on the bus through a busmonitor connection (passive)
   completion  Generate a shell completion script
   decode      Decode a KNXnet/IP frame or a cEMI frame given in hexadecimal
   describe    Read the self description of a KNXnet/IP server
@@ -38,6 +39,7 @@ Available Commands:
   group       Group communication: read, write, respond, answer, listen
   help        Help about any command
   monitor     Print every group telegram (passive)
+  property    Interface object properties of a KNXnet/IP server (device management)
   routing     KNXnet/IP routing (IP multicast)
   serve       Run a simulated KNXnet/IP server with virtual group objects
   tunnel      KNXnet/IP tunnelling connections
@@ -159,6 +161,7 @@ Flags:
   -h, --help                    help for connect
       --hold duration           Keep the connection this long before disconnecting
       --nat                     Announce the route back endpoint (through NAT)
+      --tcp                     Connect over TCP (KNXnet/IP core v2)
       --tunnel-address string   Request this tunnelling address (tunnelling v2 servers)
 
 Global Flags:
@@ -225,6 +228,7 @@ Flags:
       --routing                 Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                   With --raw: send one octet 00..3F in the APCI (6-bit value)
       --source string           Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                     Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string   Request this tunnelling address (extended CRI, tunnelling v2 servers)
 
 Global Flags:
@@ -260,6 +264,7 @@ Flags:
       --routing                 Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                   With --raw: send one octet 00..3F in the APCI (6-bit value)
       --source string           Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                     Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string   Request this tunnelling address (extended CRI, tunnelling v2 servers)
 
 Global Flags:
@@ -295,6 +300,7 @@ Flags:
       --nat                     Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
       --routing                 Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --source string           Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                     Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string   Request this tunnelling address (extended CRI, tunnelling v2 servers)
 
 Global Flags:
@@ -332,6 +338,7 @@ Flags:
       --routing                 Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                   With --raw: one octet 00..3F in the APCI
       --source string           Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                     Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string   Request this tunnelling address (extended CRI, tunnelling v2 servers)
 
 Global Flags:
@@ -366,6 +373,7 @@ Flags:
       --nat                     Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
       --routing                 Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --source string           Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                     Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string   Request this tunnelling address (extended CRI, tunnelling v2 servers)
 
 Global Flags:
@@ -401,6 +409,7 @@ Flags:
       --nat                     Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
       --routing                 Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --source string           Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                     Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string   Request this tunnelling address (extended CRI, tunnelling v2 servers)
 
 Global Flags:
@@ -666,12 +675,14 @@ Examples:
 
 Flags:
       --address string          Individual address of the server (default 15.15.0)
+      --concurrent-busmonitor   Let busmonitor connections coexist with tunnels (simulators)
       --config string           JSON configuration file (docs/serve.md)
       --device-address string   Individual address of the --object device (default "1.1.1")
   -h, --help                    help for serve
       --listen string           UDP address to listen on (default ":3671")
       --name string             Friendly name (default "knxctl serve")
       --no-discovery            Do not join the multicast group for search requests
+      --no-tcp                  Do not accept KNXnet/IP over TCP
       --object stringArray      Group object group[+group]:dpt[:flags][=value] (repeatable; flags default CRWU)
       --routing                 Route telegrams over IP multicast too
       --tunnels strings         Tunnelling addresses, one per connection (default 15.15.250)
