@@ -108,7 +108,7 @@ another is connected.`,
 			if err != nil {
 				return err
 			}
-			defer c.Close()
+			defer func() { _ = c.Close() }()
 			a.warn("busmonitor on %s (Ctrl-C to stop)", args[0])
 			st := a.stream()
 			n := 0

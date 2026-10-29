@@ -84,7 +84,7 @@ parameter object). Nothing is sent onto the KNX network.`,
 			if err != nil {
 				return err
 			}
-			defer c.Close()
+			defer func() { _ = c.Close() }()
 			b, err := c.PropRead(cmd.Context(), obj, instance, uint8(pid), start, count)
 			if err != nil {
 				return err
