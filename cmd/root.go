@@ -263,6 +263,11 @@ func newVersionCmd(a *app) *cobra.Command {
 				v.Version = "dev"
 			}
 			if info, ok := debug.ReadBuildInfo(); ok {
+				// "go install github.com/otfabric/knxctl@vX.Y.Z" sets no
+				// link-time version; the module version says it.
+				if v.Version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+					v.Version = info.Main.Version
+				}
 				for _, d := range info.Deps {
 					if d.Path == "github.com/otfabric/go-knx" {
 						v.GoKNX = d.Version

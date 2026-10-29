@@ -3,6 +3,10 @@
 All notable changes are listed here; release notes are in
 [RELEASE.md](RELEASE.md).
 
+## v0.1.1 — 2026-10-29
+
+- `knxctl version` reports the module version of `go install` builds.
+
 ## v0.1.0 — 2026-10-29
 
 First release: a command-line tool for KNX over KNXnet/IP on go-knx.
