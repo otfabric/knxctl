@@ -6,6 +6,19 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.1.1
+
+**Date:** 2026-10-29
+**Previous release:** v0.1.0
+
+## Fixes
+
+- `knxctl version` reports the module version of builds made with
+  `go install github.com/otfabric/knxctl@vX.Y.Z` (it said "dev": such
+  builds carry no link-time version).
+
+---
+
 ## v0.1.0
 
 **Date:** 2026-10-29
