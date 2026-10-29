@@ -27,7 +27,9 @@ knxctl sends nothing onto the KNX network unless the command says so:
 - `discover`, `describe`, `diagnose` and `tunnel connect` talk only to the
   KNXnet/IP server (`discover` sends one search request, no scan); no
   telegram reaches the KNX bus.
-- `monitor`, `group listen` and `routing monitor` only listen.
+- `monitor`, `group listen`, `routing monitor` and `busmonitor` only listen.
+- `property read` reads a server's interface object properties (local
+  device management); nothing reaches the KNX bus.
 - `dpt` and `decode` work offline.
 - Only `group write`, `group respond`, `group answer` and `group read` send
   telegrams (a read is a telegram that devices answer). They validate the
@@ -61,6 +63,8 @@ Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
 | `monitor` | Print every group telegram (tunnel or routing) | no |
 | `group listen [group...]` | Print the telegrams of some or all groups | no |
 | `routing monitor` | Print the routing indications on the multicast group | no |
+| `busmonitor host` | Print every bus frame through a busmonitor connection | no |
+| `property read host object pid` | Read an interface object property (device management) | no |
 | `group write group value` | Send A_GroupValue_Write | **yes** |
 | `group respond group value` | Send A_GroupValue_Response | **yes** |
 | `group read group` | Send A_GroupValue_Read and print the response | **yes** |
@@ -69,6 +73,9 @@ Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
 | `decode hex` | Decode a KNXnet/IP or cEMI frame, offline | no |
 | `serve` | Run a simulated KNXnet/IP server | its own virtual network |
 | `version`, `completion` | | |
+
+Every command that tunnels takes `--tcp` to use KNXnet/IP over TCP (core v2)
+instead of UDP, where the server supports it.
 
 Full reference with every flag: [docs/cli.md](docs/cli.md).
 
@@ -164,6 +171,18 @@ Larger setups come from a JSON file (`--config site.json`): devices, group
 objects with flags and initial values, tunnelling addresses. The simulator
 also serves ETS, Home Assistant, xknx and other KNXnet/IP clients. See
 [docs/serve.md](docs/serve.md) for the schema and what is (not) emulated.
+
+### Busmonitor and device management
+
+```bash
+knxctl busmonitor 192.168.1.10 --count 20       # raw TP1 frames, decoded
+knxctl property read 192.168.1.10 device 11     # serial number
+knxctl property read 192.168.1.10 knxnetip 76 --count 15 --tcp   # friendly name
+```
+
+A busmonitor connection is exclusive on a KNX interface: it cannot be opened
+while a tunnel is connected, and blocks tunnels while it is open. `knxctl serve
+--concurrent-busmonitor` lifts this in the simulator.
 
 ### Datapoint types and frames
 

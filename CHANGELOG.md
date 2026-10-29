@@ -3,6 +3,10 @@
 All notable changes are listed here; release notes are in
 [RELEASE.md](RELEASE.md).
 
+## v0.2.0 — 2026-10-29
+
+- `--tcp`, `busmonitor`, `property read`; `serve --no-tcp`, `--concurrent-busmonitor`.
+
 ## v0.1.1 — 2026-10-29
 
 - `knxctl version` reports the module version of `go install` builds.

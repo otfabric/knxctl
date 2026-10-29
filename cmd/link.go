@@ -25,6 +25,7 @@ type linkFlags struct {
 	routing  bool
 	group    string
 	nat      bool
+	tcp      bool
 	source   string
 	tunnelIA string
 }
@@ -35,6 +36,7 @@ func (l *linkFlags) add(cmd *cobra.Command) {
 	f.BoolVar(&l.routing, "routing", false, "Use KNXnet/IP routing (IP multicast) instead of a tunnel")
 	f.StringVar(&l.group, "multicast", "224.0.23.12:3671", "Routing multicast group")
 	f.BoolVar(&l.nat, "nat", false, "Tunnel through NAT: announce the route back endpoint 0.0.0.0:0")
+	f.BoolVar(&l.tcp, "tcp", false, "Tunnel over TCP (KNXnet/IP core v2) instead of UDP")
 	f.StringVar(&l.source, "source", "", "Source individual address of sent telegrams (routing; a tunnel uses the server's)")
 	f.StringVar(&l.tunnelIA, "tunnel-address", "", "Request this tunnelling address (extended CRI, tunnelling v2 servers)")
 }
@@ -63,6 +65,12 @@ func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
 		return client.ListenRouting(ctx, ropts, copts...)
 	case l.gateway != "":
 		topts := []tunnel.Option{tunnel.WithLogger(a.logger), tunnel.WithNAT(l.nat), tunnel.WithConnectTimeout(a.timeout)}
+		if l.tcp {
+			if l.nat {
+				return nil, errs.Invalid("--tcp and --nat exclude each other (TCP needs no NAT endpoints)")
+			}
+			topts = append(topts, tunnel.WithTCP())
+		}
 		if a.local != "" {
 			topts = append(topts, tunnel.WithLocalAddr(a.local))
 		}

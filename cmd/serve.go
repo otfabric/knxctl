@@ -86,7 +86,7 @@ func buildDevice(dc deviceConfig) (*device.Device, error) {
 func newServeCmd(a *app) *cobra.Command {
 	var listenAddr, name, addr, config, devAddr string
 	var tunnels, objects []string
-	var routing, noDiscovery bool
+	var routing, noDiscovery, noTCP, concurrentBusmon bool
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run a simulated KNXnet/IP server with virtual group objects",
@@ -128,7 +128,8 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 				}
 				cfg.Devices = append(cfg.Devices, dc)
 			}
-			opts := []server.Option{server.WithListenAddr(listenAddr), server.WithLogger(a.logger), server.WithRouting(routing), server.WithDiscovery(!noDiscovery)}
+			opts := []server.Option{server.WithListenAddr(listenAddr), server.WithLogger(a.logger), server.WithRouting(routing), server.WithDiscovery(!noDiscovery),
+				server.WithTCP(!noTCP), server.WithConcurrentBusmonitor(concurrentBusmon)}
 			if cfg.Name != "" {
 				opts = append(opts, server.WithName(cfg.Name))
 			}
@@ -210,5 +211,7 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 	f.StringVar(&config, "config", "", "JSON configuration file (docs/serve.md)")
 	f.BoolVar(&routing, "routing", false, "Route telegrams over IP multicast too")
 	f.BoolVar(&noDiscovery, "no-discovery", false, "Do not join the multicast group for search requests")
+	f.BoolVar(&noTCP, "no-tcp", false, "Do not accept KNXnet/IP over TCP")
+	f.BoolVar(&concurrentBusmon, "concurrent-busmonitor", false, "Let busmonitor connections coexist with tunnels (simulators)")
 	return cmd
 }
