@@ -49,6 +49,7 @@ func (r propertyResult) Text() string {
 }
 
 func newPropertyCmd(a *app) *cobra.Command {
+	var sec secureFlags
 	cmd := &cobra.Command{Use: "property", Short: "Interface object properties of a KNXnet/IP server (device management)"}
 	var instance, count uint8
 	var start uint16
@@ -80,6 +81,10 @@ parameter object). Nothing is sent onto the KNX network.`,
 			if tcp {
 				opts = append(opts, tunnel.WithTCP())
 			}
+			opts, err = sec.tunnelOptions(opts, "")
+			if err != nil {
+				return err
+			}
 			c, err := devmgmt.Dial(cmd.Context(), args[0], opts...)
 			if err != nil {
 				return err
@@ -106,6 +111,7 @@ parameter object). Nothing is sent onto the KNX network.`,
 	read.Flags().Uint16Var(&start, "start", 1, "First element (0: the number of elements)")
 	read.Flags().Uint8Var(&count, "count", 1, "Number of elements (1..15)")
 	read.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP")
+	sec.add(read.Flags())
 	read.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (through NAT)")
 	cmd.AddCommand(read)
 	return cmd

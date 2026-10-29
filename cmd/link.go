@@ -28,6 +28,7 @@ type linkFlags struct {
 	tcp      bool
 	source   string
 	tunnelIA string
+	secure   secureFlags
 }
 
 func (l *linkFlags) add(cmd *cobra.Command) {
@@ -39,6 +40,7 @@ func (l *linkFlags) add(cmd *cobra.Command) {
 	f.BoolVar(&l.tcp, "tcp", false, "Tunnel over TCP (KNXnet/IP core v2) instead of UDP")
 	f.StringVar(&l.source, "source", "", "Source individual address of sent telegrams (routing; a tunnel uses the server's)")
 	f.StringVar(&l.tunnelIA, "tunnel-address", "", "Request this tunnelling address (extended CRI, tunnelling v2 servers)")
+	l.secure.add(f)
 }
 
 func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
@@ -51,6 +53,13 @@ func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
 		}
 		copts = append(copts, client.WithSource(ia))
 	}
+	ds, err := l.secure.dataSecure()
+	if err != nil {
+		return nil, err
+	}
+	if ds != nil {
+		copts = append(copts, client.WithDataSecure(ds))
+	}
 	switch {
 	case l.routing && l.gateway != "":
 		return nil, errs.Invalid("--gateway and --routing exclude each other")
@@ -61,6 +70,13 @@ func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
 		ropts := []routing.Option{routing.WithGroup(l.group), routing.WithLogger(a.logger), routing.WithLoopback(true)}
 		if a.iface != "" {
 			ropts = append(ropts, routing.WithInterface(a.iface))
+		}
+		key, latency, ok, err := l.secure.backbone()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			ropts = append(ropts, routing.WithSecure(key, latency))
 		}
 		return client.ListenRouting(ctx, ropts, copts...)
 	case l.gateway != "":
@@ -80,6 +96,16 @@ func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
 				return nil, errs.Invalid("--tunnel-address: %v", err)
 			}
 			topts = append(topts, tunnel.WithIndividualAddress(ia))
+		}
+		cred, err := l.secure.credentials(l.tunnelIA)
+		if err != nil {
+			return nil, err
+		}
+		if cred != nil {
+			if l.nat {
+				return nil, errs.Invalid("secure tunnelling runs over TCP; --nat does not apply")
+			}
+			topts = append(topts, tunnel.WithSecure(*cred))
 		}
 		return client.DialTunnel(ctx, l.gateway, topts, copts...)
 	}
@@ -137,6 +163,7 @@ type telegramRecord struct {
 	Value   any    `json:"value,omitempty"`
 	Text    string `json:"text,omitempty"`
 	Error   string `json:"decodeError,omitempty"`
+	Secure  bool   `json:"secure,omitempty"`
 }
 
 func serviceName(s apdu.APCI) string {
@@ -153,7 +180,7 @@ func serviceName(s apdu.APCI) string {
 }
 
 func newTelegramRecord(t client.Telegram, ty *dpt.Type) telegramRecord {
-	r := telegramRecord{Time: t.Time.UTC().Format(time.RFC3339Nano), Source: t.Source.String(), Group: t.Group.String(), Service: serviceName(t.Service)}
+	r := telegramRecord{Time: t.Time.UTC().Format(time.RFC3339Nano), Source: t.Source.String(), Group: t.Group.String(), Service: serviceName(t.Service), Secure: t.Secure}
 	if t.Service != apdu.GroupValueReadService {
 		r.Data, r.Small = strings.ToUpper(hex.EncodeToString(t.Value.Data)), t.Value.Small
 		if ty != nil {
@@ -178,6 +205,9 @@ func (r telegramRecord) line() string {
 	}
 	if r.Error != "" {
 		s += " (undecodable: " + r.Error + ")"
+	}
+	if r.Secure {
+		s += " [secure]"
 	}
 	return s
 }

@@ -131,7 +131,7 @@ go to stderr. Exit codes: docs/exitcodes.md.`,
 	pf.CountVarP(&a.verbose, "verbose", "v", "Log protocol events to stderr (-v info, -vv debug)")
 	pf.BoolVarP(&a.quiet, "quiet", "q", false, "Log nothing to stderr")
 	root.AddCommand(newDiscoverCmd(a), newDescribeCmd(a), newTunnelCmd(a), newGroupCmd(a), newMonitorCmd(a), newRoutingCmd(a),
-		newDPTCmd(a), newDecodeCmd(a), newDiagnoseCmd(a), newBusmonitorCmd(a), newPropertyCmd(a), newServeCmd(a), newVersionCmd(a), newCompletionCmd())
+		newDPTCmd(a), newDecodeCmd(a), newDiagnoseCmd(a), newBusmonitorCmd(a), newPropertyCmd(a), newKeyringCmd(a), newServeCmd(a), newVersionCmd(a), newCompletionCmd())
 	return root
 }
 

@@ -6,7 +6,8 @@ cd "$(dirname "$0")/.."
 GOWORK=off go build -o bin/knxctl .
 cmds="discover describe tunnel tunnel_connect group group_write group_respond
 group_read group_answer group_listen monitor routing routing_monitor diagnose
-dpt dpt_list dpt_describe dpt_encode dpt_decode decode serve version completion"
+dpt dpt_list dpt_describe dpt_encode dpt_decode decode busmonitor property
+property_read keyring keyring_show serve version completion"
 {
 	echo "# knxctl command reference"
 	echo

@@ -6,11 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/otfabric/go-knx"
 	"github.com/otfabric/go-knx/apdu"
+	"github.com/otfabric/go-knx/datasecure"
 	"github.com/otfabric/go-knx/device"
+	"github.com/otfabric/go-knx/keyring"
+	"github.com/otfabric/go-knx/secure"
 	"github.com/otfabric/go-knx/server"
 	"github.com/otfabric/knxctl/internal/errs"
 	"github.com/spf13/cobra"
@@ -85,8 +89,10 @@ func buildDevice(dc deviceConfig) (*device.Device, error) {
 
 func newServeCmd(a *app) *cobra.Command {
 	var listenAddr, name, addr, config, devAddr string
-	var tunnels, objects []string
+	var tunnels, objects, secureUsers []string
 	var routing, noDiscovery, noTCP, concurrentBusmon bool
+	var sec secureFlags
+	var keyringHost string
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run a simulated KNXnet/IP server with virtual group objects",
@@ -154,6 +160,19 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 				}
 				opts = append(opts, server.WithTunnelAddresses(ias...))
 			}
+			secOpt, keys, err := serveSecure(&sec, secureUsers, keyringHost, &cfg)
+			if err != nil {
+				return err
+			}
+			if secOpt != nil {
+				opts = append(opts, secOpt)
+			}
+			if len(cfg.Tunnels) > 0 && !cmd.Flags().Changed("tunnels") && config == "" {
+				opts = append(opts, server.WithTunnelAddresses(parseAddrs(cfg.Tunnels)...))
+			}
+			if cfg.Address != "" && !cmd.Flags().Changed("address") && config == "" {
+				opts = append(opts, server.WithIndividualAddress(knx.MustParseIndividualAddress(cfg.Address)))
+			}
 			s, err := server.New(opts...)
 			if err != nil {
 				return err
@@ -177,11 +196,23 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 				if !ok {
 					return
 				}
-				svc, v, err := apdu.ParseGroupValue(t.Frame.TPDU)
+				frame, secured := t.Frame, datasecure.IsSecure(t.Frame)
+				if secured {
+					if k, ok := keys[g]; ok {
+						if plain, _, _, err := datasecure.Open(datasecure.Key(k), frame); err == nil {
+							frame = plain
+						}
+					}
+				}
+				svc, v, err := apdu.ParseGroupValue(frame.TPDU)
 				if err != nil {
+					if secured {
+						r := telegramRecord{Time: nowUTC(), Source: t.Frame.Source.String(), Group: g.String(), Service: "secure", Secure: true}
+						_ = st.Record("telegram", r.line(), r)
+					}
 					return
 				}
-				r := telegramRecord{Time: nowUTC(), Source: t.Frame.Source.String(), Group: g.String(), Service: serviceName(svc)}
+				r := telegramRecord{Time: nowUTC(), Source: t.Frame.Source.String(), Group: g.String(), Service: serviceName(svc), Secure: secured}
 				if svc != apdu.GroupValueReadService {
 					r.Data, r.Small = fmt.Sprintf("%X", v.Data), v.Small
 					if o := objs[g]; o != nil {
@@ -213,5 +244,126 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 	f.BoolVar(&noDiscovery, "no-discovery", false, "Do not join the multicast group for search requests")
 	f.BoolVar(&noTCP, "no-tcp", false, "Do not accept KNXnet/IP over TCP")
 	f.BoolVar(&concurrentBusmon, "concurrent-busmonitor", false, "Let busmonitor connections coexist with tunnels (simulators)")
+	f.StringArrayVar(&secureUsers, "secure-user", nil, "KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)")
+	f.StringVar(&sec.devicePassword, "device-password", envOr("KNXCTL_DEVICE_PASSWORD", ""), "Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD)")
+	f.StringVar(&sec.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)")
+	f.StringVar(&sec.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
+	f.StringVar(&keyringHost, "keyring-host", "", "Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)")
 	return cmd
+}
+
+func parseAddrs(ss []string) []knx.IndividualAddress {
+	var out []knx.IndividualAddress
+	for _, s := range ss {
+		out = append(out, knx.MustParseIndividualAddress(s))
+	}
+	return out
+}
+
+// serveSecure builds the secure option of serve from --secure-user or a
+// keyring host, and returns the keyring's group keys (to print Data
+// Secure telegrams). A keyring host also gives the server address and
+// tunnels when the configuration has none.
+func serveSecure(sec *secureFlags, users []string, host string, cfg *serveConfig) (server.Option, map[knx.GroupAddress]keyring.Key, error) {
+	kr, err := sec.keyring()
+	if err != nil {
+		return nil, nil, err
+	}
+	var keys map[knx.GroupAddress]keyring.Key
+	if kr != nil {
+		keys = kr.GroupKeys
+	}
+	su := map[uint8]server.SecureUser{}
+	devPassword := sec.devicePassword
+	if kr != nil && len(users) == 0 {
+		var hostIA knx.IndividualAddress
+		if host != "" {
+			if hostIA, err = knx.ParseIndividualAddress(host); err != nil {
+				return nil, nil, errs.Invalid("--keyring-host: %v", err)
+			}
+		} else {
+			for _, itf := range kr.Interfaces {
+				if itf.Type == keyring.Tunneling && itf.UserID != 0 && itf.HasHost {
+					hostIA = itf.Host
+					break
+				}
+			}
+		}
+		tunnels := kr.Tunnels(hostIA)
+		for _, itf := range tunnels {
+			if itf.UserID == 0 {
+				continue
+			}
+			k, err := secure.UserPasswordKey(itf.Password)
+			if err != nil {
+				return nil, nil, errs.Invalid("keyring user %d: %v", itf.UserID, err)
+			}
+			su[itf.UserID] = server.SecureUser{Key: k, Address: itf.IndividualAddress}
+			if devPassword == "" {
+				devPassword = itf.Authentication
+			}
+		}
+		if d := kr.Device(hostIA); d != nil && d.ManagementPassword != "" && len(su) > 0 {
+			k, err := secure.UserPasswordKey(d.ManagementPassword)
+			if err != nil {
+				return nil, nil, errs.Invalid("keyring device %s: %v", hostIA, err)
+			}
+			su[1] = server.SecureUser{Key: k} // the management user
+			if d.Authentication != "" {
+				devPassword = d.Authentication
+			}
+		}
+		if len(su) == 0 {
+			return nil, keys, nil // a keyring for Data Secure only
+		}
+		if len(cfg.Tunnels) == 0 {
+			for _, itf := range tunnels {
+				cfg.Tunnels = append(cfg.Tunnels, itf.IndividualAddress.String())
+			}
+		}
+		if cfg.Address == "" {
+			cfg.Address = hostIA.String()
+		}
+	}
+	for _, u := range users {
+		parts := strings.SplitN(u, ":", 3)
+		if len(parts) < 2 {
+			return nil, nil, errs.Invalid("--secure-user %q: want id:password[:tunnel address]", redact(u))
+		}
+		id, err := strconv.Atoi(parts[0])
+		if err != nil || id < 1 || id > 127 {
+			return nil, nil, errs.Invalid("--secure-user: user id %q (1..127)", parts[0])
+		}
+		k, err := secure.UserPasswordKey(parts[1])
+		if err != nil {
+			return nil, nil, errs.Invalid("--secure-user %d: %v", id, err)
+		}
+		user := server.SecureUser{Key: k}
+		if len(parts) == 3 {
+			if user.Address, err = knx.ParseIndividualAddress(parts[2]); err != nil {
+				return nil, nil, errs.Invalid("--secure-user %d: %v", id, err)
+			}
+		}
+		su[uint8(id)] = user
+	}
+	if len(su) == 0 {
+		return nil, keys, nil
+	}
+	if devPassword == "" {
+		return nil, nil, errs.Invalid("a secure server needs --device-password (or a keyring)")
+	}
+	dev, err := secure.DeviceAuthenticationCode(devPassword)
+	if err != nil {
+		return nil, nil, errs.Invalid("--device-password: %v", err)
+	}
+	return server.WithSecure(dev, su), keys, nil
+}
+
+// redact hides the password of an id:password[:address] argument.
+func redact(s string) string {
+	parts := strings.SplitN(s, ":", 3)
+	if len(parts) >= 2 {
+		parts[1] = "***"
+	}
+	return strings.Join(parts, ":")
 }

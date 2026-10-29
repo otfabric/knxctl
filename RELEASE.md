@@ -6,6 +6,33 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.3.0
+
+**Date:** 2026-10-30
+**Previous release:** v0.2.0
+
+## Summary
+
+KNX IP Secure and KNX Data Secure, on go-knx v0.3.0.
+
+## Additions
+
+- `--keyring` (ETS .knxkeys) on every command that reaches the network:
+  secure tunnelling as a keyring user (`--tunnel-address`, `--user-id`, or
+  the first user; user 1 is the host's management password), Data Secure
+  for the keyring's groups, secure routing with its backbone key.
+- `--user-id`, `--user-password`, `--device-password`, `--backbone-key`
+  without a keyring. Secrets default to environment variables.
+- `serve --keyring/--keyring-host` and `serve --secure-user
+  id:password[:address] --device-password`: a secure simulator; Data
+  Secure telegrams are printed decrypted when the keyring has the key.
+- `keyring show`: verify and summarise a keyring (`--secrets` to show keys
+  and passwords).
+- Secured telegrams are marked `[secure]` / `"secure": true`.
+- docs/cli.md now covers `busmonitor`, `property read` and `keyring`.
+
+---
+
 ## v0.2.0
 
 **Date:** 2026-10-29

@@ -79,6 +79,7 @@ func newBusmonitorCmd(a *app) *cobra.Command {
 	var nat, tcp bool
 	var count int
 	var duration time.Duration
+	var sec secureFlags
 	cmd := &cobra.Command{
 		Use:   "busmonitor host[:port]",
 		Short: "Monitor every frame on the bus through a busmonitor connection (passive)",
@@ -103,6 +104,10 @@ another is connected.`,
 			}
 			if a.local != "" {
 				opts = append(opts, tunnel.WithLocalAddr(a.local))
+			}
+			opts, err := sec.tunnelOptions(opts, "")
+			if err != nil {
+				return err
 			}
 			c, err := tunnel.Dial(ctx, args[0], opts...)
 			if err != nil {
@@ -135,6 +140,7 @@ another is connected.`,
 	}
 	cmd.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (through NAT)")
 	cmd.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP")
+	sec.add(cmd.Flags())
 	cmd.Flags().IntVarP(&count, "count", "n", 0, "Stop after this many frames")
 	cmd.Flags().DurationVar(&duration, "duration", 0, "Stop after this time")
 	return cmd

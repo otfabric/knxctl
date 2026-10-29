@@ -71,6 +71,7 @@ Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
 | `group answer group value` | Answer reads of a group, like a device with the R flag | **yes** |
 | `dpt list / describe / encode / decode` | Datapoint types, offline | no |
 | `decode hex` | Decode a KNXnet/IP or cEMI frame, offline | no |
+| `keyring show file` | Verify and summarise an ETS keyring (secrets only with `--secrets`) | no |
 | `serve` | Run a simulated KNXnet/IP server | its own virtual network |
 | `version`, `completion` | | |
 
@@ -184,6 +185,31 @@ A busmonitor connection is exclusive on a KNX interface: it cannot be opened
 while a tunnel is connected, and blocks tunnels while it is open. `knxctl serve
 --concurrent-busmonitor` lifts this in the simulator.
 
+### KNX Secure
+
+knxctl speaks KNX IP Secure (secure tunnelling over TCP, secure routing) and
+KNX Data Secure (secured group communication), with the keys of an ETS
+keyring or given directly:
+
+```bash
+export KNXCTL_KEYRING=project.knxkeys KNXCTL_KEYRING_PASSWORD=...   # secrets from the environment
+knxctl keyring show project.knxkeys                     # users, groups, devices (no secrets)
+knxctl group read 1/2/4 --gateway 192.168.1.10          # secure tunnel as the keyring's first user, Data Secure groups decrypted
+knxctl group write 1/2/3 on --gateway 192.168.1.10 --user-id 3
+knxctl monitor --routing                                # secure routing with the keyring's backbone key
+KNXCTL_USER_PASSWORD=... knxctl tunnel connect 192.168.1.10 --user-id 2 --device-password ...
+knxctl serve --keyring project.knxkeys --keyring-host 1.1.0   # a secure simulator: the host's users
+knxctl serve --secure-user 2:secret:1.1.10 --device-password trustme
+```
+
+A keyring selects the tunnelling user by `--tunnel-address`, `--user-id`
+or as the first tunnelling user; user 1 is the host's management password
+(device management). Secured telegrams are marked `[secure]` (`"secure":
+true` in JSON). Data Secure covers group communication; knxctl does not
+answer S-A_Sync requests. The implementation follows public sources and is
+verified against xknx and Calimero, not certified (go-knx's
+[SPECIFICATIONS](https://github.com/otfabric/go-knx/blob/main/docs/standards/SPECIFICATIONS.md#knx-secure-sources)).
+
 ### Datapoint types and frames
 
 ```sh
@@ -218,6 +244,8 @@ knxctl has no configuration file. Two environment variables set defaults:
 |----------|-|
 | `KNXCTL_FORMAT` | Default `--format` (`json` for scripts) |
 | `KNXCTL_GATEWAY` | Default `--gateway`, so that `knxctl group read 1/2/4` needs no flag |
+| `KNXCTL_KEYRING`, `KNXCTL_KEYRING_PASSWORD` | Default `--keyring` and its password |
+| `KNXCTL_USER_PASSWORD`, `KNXCTL_DEVICE_PASSWORD`, `KNXCTL_BACKBONE_KEY` | Secure tunnelling and routing secrets without a keyring |
 
 Flags given on the command line win.
 
@@ -257,7 +285,9 @@ are stable: [docs/exitcodes.md](docs/exitcodes.md).
 
 ## Security
 
-knxctl handles no secrets yet; KNX Secure is not implemented. See
+knxctl never prints keys or passwords (`keyring show --secrets` excepted)
+and reads them from the environment by default; avoid the flags on shared
+hosts, where command lines are visible to other users. See
 [SECURITY.md](SECURITY.md).
 
 ## Documentation

@@ -37,14 +37,22 @@ that can change physical state.
 
 ## Secrets
 
-knxctl handles no secrets yet: it has no credentials, keyrings or
-passwords, and writes nothing to disk except where you redirect its output.
+knxctl reads keyrings (`--keyring`) and secure tunnelling and routing
+secrets. They come from the environment by default (`KNXCTL_KEYRING_PASSWORD`,
+`KNXCTL_USER_PASSWORD`, `KNXCTL_DEVICE_PASSWORD`, `KNXCTL_BACKBONE_KEY`);
+the equivalent flags exist for tests and scripts, but command lines are
+visible to other users of a host. knxctl never prints keys or passwords —
+`keyring show --secrets` is the one deliberate exception — and error
+messages name users and addresses only (`serve --secure-user` errors mask
+the password). It writes nothing to disk except where you redirect its
+output.
 
 ## KNX Secure
 
-KNX Secure (KNXnet/IP Secure tunnelling and routing, KNX Data Secure) is
-not implemented. knxctl talks plain KNXnet/IP only: telegrams are neither
-encrypted nor authenticated, and a secured gateway or secured group address
-cannot be used. When KNX Secure support arrives, keys will be read from a
-keyring file named on the command line, never from arguments or the
-environment, and never printed.
+knxctl uses go-knx's KNX IP Secure (secure tunnelling over TCP, secure
+routing) and KNX Data Secure (group communication). With security
+configured, knxctl never falls back to plain KNXnet/IP: a failed handshake
+is an error (exit code 6). Not covered: S-A_Sync (a device asking for
+knxctl's sequence number gets no answer), point to point Data Secure,
+secure sessions over UDP. The implementation follows public sources and is
+verified for interoperability with xknx and Calimero; it is not certified.
