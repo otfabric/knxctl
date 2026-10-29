@@ -17,9 +17,9 @@ import (
 func newGroupCmd(a *app) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "group",
-		Short: "Group communication: read, write, respond, listen",
+		Short: "Group communication: read, write, respond, answer, listen",
 	}
-	cmd.AddCommand(newGroupWriteCmd(a, false), newGroupWriteCmd(a, true), newGroupReadCmd(a), newGroupListenCmd(a))
+	cmd.AddCommand(newGroupWriteCmd(a, false), newGroupWriteCmd(a, true), newGroupReadCmd(a), newGroupListenCmd(a), newGroupAnswerCmd(a))
 	return cmd
 }
 
