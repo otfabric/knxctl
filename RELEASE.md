@@ -11,14 +11,12 @@ version as its notes. Add the section before running it.
 **Date:** 2026-10-29
 **Previous release:** none (first release)
 
-Planned first release; not released yet.
-
 ## Summary
 
 knxctl, a command-line tool for KNX over KNXnet/IP: discover and inspect
 gateways, monitor group telegrams, read, write and answer group objects,
 encode and decode datapoint types and frames, and run a simulated KNXnet/IP
-server. Built on go-knx.
+server. Built on go-knx v0.1.0.
 
 ## Additions
 
