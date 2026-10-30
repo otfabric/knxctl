@@ -3,7 +3,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all build build-all test test-multicast coverage cover cross lint lint-ci fmt fmt-check vet vuln docs check install clean
+.PHONY: help all build build-all test test-multicast coverage cover cross lint lint-ci fmt fmt-check vet vuln docs check install clean e2e
 
 help: ## This help
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -80,6 +80,11 @@ docs: ## Regenerate docs/cli.md from the --help of every command
 	@scripts/gen-cli-doc.sh
 
 check: fmt-check lint lint-ci vet cross vuln test coverage ## Everything CI checks
+
+e2e: ## Build the binary and run the e2e suite against it
+	@mkdir -p bin
+	@go build $(LDFLAGS) -o bin/knxctl .
+	@KNXCTL_E2E_BIN=$(CURDIR)/bin/knxctl KNXCTL_E2E_VERSION=$(VERSION) go test -count=1 -tags=e2e ./e2e/...
 
 install: build ## Install into /usr/local/bin
 	@install -m 0755 $(BIN_DIR)/$(APP_NAME) /usr/local/bin/$(APP_NAME)
