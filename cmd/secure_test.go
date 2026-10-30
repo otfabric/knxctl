@@ -3,6 +3,8 @@
 package cmd
 
 import (
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -102,8 +104,28 @@ func TestKeyringFlags(t *testing.T) {
 	}
 }
 
+// freeBothPort returns a port free for UDP and TCP on 127.0.0.1.
+func freeBothPort(t *testing.T) string {
+	t.Helper()
+	for i := 0; i < 50; i++ {
+		u, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		port := u.LocalAddr().(*net.UDPAddr).Port
+		l, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port})
+		_ = u.Close()
+		if err == nil {
+			_ = l.Close()
+			return fmt.Sprintf("127.0.0.1:%d", port)
+		}
+	}
+	t.Fatal("no port free for UDP and TCP")
+	return ""
+}
+
 func TestServeSecure(t *testing.T) {
-	b := start(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--tunnels", "1.1.10,1.1.11", "--secure-user", "2:pw2:1.1.10", "--device-password", "dev", "--object", "1/2/3:1.001")
+	b := start(t, "serve", "--listen", freeBothPort(t), "--no-discovery", "--tunnels", "1.1.10,1.1.11", "--secure-user", "2:pw2:1.1.10", "--device-password", "dev", "--object", "1/2/3:1.001")
 	b.waitErr(t, "serving on")
 	addr := regexp.MustCompile(`serving on (\S+)`).FindStringSubmatch(b.errOut.String())[1]
 	want(t, run(t, "group", "write", "1/2/3", "on", "--gateway", addr, "--user-id", "2", "--user-password", "pw2", "--device-password", "dev"), 0)
@@ -111,7 +133,7 @@ func TestServeSecure(t *testing.T) {
 	b.stop(t)
 
 	kr := testKeyring(t)
-	b = start(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--keyring", kr, "--keyring-password", "kpw", "--object", "1/2/3:1.001")
+	b = start(t, "serve", "--listen", freeBothPort(t), "--no-discovery", "--keyring", kr, "--keyring-password", "kpw", "--object", "1/2/3:1.001")
 	b.waitErr(t, "serving on")
 	addr = regexp.MustCompile(`serving on (\S+)`).FindStringSubmatch(b.errOut.String())[1]
 	want(t, run(t, "group", "write", "1/2/9", "21", "--dpt", "9.001", "--gateway", addr, "--keyring", kr, "--keyring-password", "kpw"), 0)
