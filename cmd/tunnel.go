@@ -76,6 +76,7 @@ is sent onto the KNX network.`,
 			defer func() { _ = c.Close() }()
 			r := tunnelResult{Server: c.Server().String(), Channel: c.Channel(), Address: c.IndividualAddress().String(), Local: c.LocalAddr().String(), ConnectMs: time.Since(start).Milliseconds(), Heartbeats: true}
 			if hold > 0 {
+				a.warn("connected to %s as %s, holding for %s (Ctrl-C to disconnect)", r.Server, r.Address, hold)
 				select {
 				case <-time.After(hold):
 				case <-c.Done():

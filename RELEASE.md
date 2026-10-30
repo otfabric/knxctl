@@ -6,6 +6,26 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.5.1
+
+**Date:** 2026-10-30
+**Previous release:** v0.5.0
+
+## Fixes
+
+- A command interrupted before it had a result (Ctrl-C while connecting,
+  for example) exits 130 with kind `interrupted`, as the sibling CLIs do;
+  it was reported as an internal error (exit 10).
+- `tunnel connect --hold` says on stderr when it is connected and
+  holding.
+- Tests: the interrupt and server-gone tests of `tunnel connect` waited
+  for the server to register the connection, which happens before the
+  client has its CONNECT_RESPONSE; under load the client was interrupted
+  while still connecting (the flaky failure). They now wait for the
+  client's own notice.
+
+---
+
 ## v0.5.0
 
 **Date:** 2026-10-30

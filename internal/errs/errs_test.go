@@ -18,7 +18,8 @@ func TestExitCodes(t *testing.T) {
 		KindUsage: ExitUsage, KindInvalidInput: ExitInvalidInput, KindTransport: ExitTransport,
 		KindTimeout: ExitTimeout, KindProtocol: ExitProtocol, KindPermission: ExitPermission,
 		KindUnsupported: ExitUnsupported, KindRejected: ExitRejected, KindOutput: ExitInternal,
-		KindInternal: ExitInternal,
+		KindInternal:    ExitInternal,
+		KindInterrupted: ExitInterrupted,
 	} {
 		if got := ExitCode(k); got != want {
 			t.Errorf("ExitCode(%s) = %d, want %d", k, got, want)
@@ -35,7 +36,7 @@ func TestClassify(t *testing.T) {
 		kind Kind
 		code string
 	}{
-		{context.Canceled, KindInternal, CodeCanceled},
+		{context.Canceled, KindInterrupted, CodeCanceled},
 		{fmt.Errorf("x: %w", knx.ErrTimeout), KindTimeout, CodeTimeout},
 		{context.DeadlineExceeded, KindTimeout, CodeTimeout},
 		{knx.ErrBusy, KindRejected, CodeBusy},

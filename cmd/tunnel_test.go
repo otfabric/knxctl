@@ -96,7 +96,9 @@ func TestTunnelConnect(t *testing.T) {
 func TestTunnelConnectInterrupted(t *testing.T) {
 	s := startServer(t)
 	b := start(t, "tunnel", "connect", s.addr, "--hold", "1m")
-	eventually(t, "connection", func() bool { return len(s.Connections()) == 1 })
+	// The client is connected when it says so; the server registers the
+	// connection before its CONNECT_RESPONSE arrives.
+	b.waitErr(t, "holding for")
 	r := b.stop(t)
 	want(t, r, 0, "held 1m0s")
 }
@@ -104,7 +106,7 @@ func TestTunnelConnectInterrupted(t *testing.T) {
 func TestTunnelConnectServerGone(t *testing.T) {
 	s := startServer(t)
 	b := start(t, "tunnel", "connect", s.addr, "--hold", "1m", "--format", "json")
-	eventually(t, "connection", func() bool { return len(s.Connections()) == 1 })
+	b.waitErr(t, "holding for")
 	_ = s.Close() // disconnects the client
 	r := b.wait(t)
 	want(t, r, 0)

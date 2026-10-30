@@ -29,6 +29,9 @@ const (
 	KindPermission   Kind = "permission"
 	KindOutput       Kind = "output"
 	KindInternal     Kind = "internal"
+	// KindInterrupted is a command stopped by SIGINT or SIGTERM before
+	// it finished.
+	KindInterrupted Kind = "interrupted"
 )
 
 // Process exit codes.
@@ -44,6 +47,7 @@ const (
 	ExitUnsupported  = 8
 	ExitRejected     = 9
 	ExitInternal     = 10
+	ExitInterrupted  = 130 // 128 + SIGINT, as a shell reports it
 )
 
 // Stable codes for scripts (the JSON error's "code").
@@ -110,6 +114,8 @@ func ExitCode(k Kind) int {
 		return ExitUnsupported
 	case KindRejected:
 		return ExitRejected
+	case KindInterrupted:
+		return ExitInterrupted
 	default:
 		return ExitInternal
 	}
@@ -126,7 +132,7 @@ func Classify(err error) *Error {
 	var ne net.Error
 	switch {
 	case errors.Is(err, context.Canceled):
-		return mk(KindInternal, CodeCanceled)
+		return mk(KindInterrupted, CodeCanceled)
 	case errors.Is(err, knx.ErrTimeout), errors.Is(err, context.DeadlineExceeded):
 		return mk(KindTimeout, CodeTimeout)
 	case errors.Is(err, knx.ErrBusy):
