@@ -6,6 +6,28 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.4.0
+
+**Date:** 2026-10-30
+**Previous release:** v0.3.0
+
+## Summary
+
+On go-knx v0.4.0: secure sessions over UDP, secure routing in `serve`,
+and S-A_Sync with the surrogate role.
+
+## Additions
+
+- `--udp` on every tunnelling command: the KNX IP Secure session over UDP
+  instead of TCP.
+- `serve --routing` routes securely with the keyring's backbone key or
+  `--backbone-key`.
+- With a keyring that has a tool key for knxctl's own address, knxctl
+  answers S-A_Sync and group object diagnostics: Calimero tools send their
+  Data Secure group telegrams through it.
+
+---
+
 ## v0.3.0
 
 **Date:** 2026-10-30

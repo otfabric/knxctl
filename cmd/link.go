@@ -97,15 +97,11 @@ func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
 			}
 			topts = append(topts, tunnel.WithIndividualAddress(ia))
 		}
-		cred, err := l.secure.credentials(l.tunnelIA)
-		if err != nil {
-			return nil, err
+		if l.secure.udp && l.tcp {
+			return nil, errs.Invalid("--udp and --tcp exclude each other")
 		}
-		if cred != nil {
-			if l.nat {
-				return nil, errs.Invalid("secure tunnelling runs over TCP; --nat does not apply")
-			}
-			topts = append(topts, tunnel.WithSecure(*cred))
+		if topts, err = l.secure.tunnelOptions(topts, l.tunnelIA); err != nil {
+			return nil, err
 		}
 		return client.DialTunnel(ctx, l.gateway, topts, copts...)
 	}

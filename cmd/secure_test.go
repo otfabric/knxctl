@@ -3,6 +3,8 @@
 package cmd
 
 import (
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -102,8 +104,28 @@ func TestKeyringFlags(t *testing.T) {
 	}
 }
 
+// freeBothPort returns a port free for UDP and TCP on 127.0.0.1.
+func freeBothPort(t *testing.T) string {
+	t.Helper()
+	for i := 0; i < 50; i++ {
+		u, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		port := u.LocalAddr().(*net.UDPAddr).Port
+		l, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port})
+		_ = u.Close()
+		if err == nil {
+			_ = l.Close()
+			return fmt.Sprintf("127.0.0.1:%d", port)
+		}
+	}
+	t.Fatal("no port free for UDP and TCP")
+	return ""
+}
+
 func TestServeSecure(t *testing.T) {
-	b := start(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--tunnels", "1.1.10,1.1.11", "--secure-user", "2:pw2:1.1.10", "--device-password", "dev", "--object", "1/2/3:1.001")
+	b := start(t, "serve", "--listen", freeBothPort(t), "--no-discovery", "--tunnels", "1.1.10,1.1.11", "--secure-user", "2:pw2:1.1.10", "--device-password", "dev", "--object", "1/2/3:1.001")
 	b.waitErr(t, "serving on")
 	addr := regexp.MustCompile(`serving on (\S+)`).FindStringSubmatch(b.errOut.String())[1]
 	want(t, run(t, "group", "write", "1/2/3", "on", "--gateway", addr, "--user-id", "2", "--user-password", "pw2", "--device-password", "dev"), 0)
@@ -111,7 +133,7 @@ func TestServeSecure(t *testing.T) {
 	b.stop(t)
 
 	kr := testKeyring(t)
-	b = start(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--keyring", kr, "--keyring-password", "kpw", "--object", "1/2/3:1.001")
+	b = start(t, "serve", "--listen", freeBothPort(t), "--no-discovery", "--keyring", kr, "--keyring-password", "kpw", "--object", "1/2/3:1.001")
 	b.waitErr(t, "serving on")
 	addr = regexp.MustCompile(`serving on (\S+)`).FindStringSubmatch(b.errOut.String())[1]
 	want(t, run(t, "group", "write", "1/2/9", "21", "--dpt", "9.001", "--gateway", addr, "--keyring", kr, "--keyring-password", "kpw"), 0)
@@ -133,6 +155,24 @@ func TestServeSecure(t *testing.T) {
 			t.Errorf("%v: exit %d %s", args, r.code, r.errOut)
 		}
 	}
+}
+
+// TestSecureUDP: a secure session over UDP, and its flag errors.
+func TestSecureUDP(t *testing.T) {
+	s := startServer(t, secureOption(t))
+	sec := []string{"--gateway", s.addr, "--user-id", "2", "--user-password", "pw2", "--device-password", "dev", "--udp"}
+	want(t, run(t, append([]string{"group", "write", "1/2/6", "19.5", "--dpt", "9.001"}, sec...)...), 0, "write 1/2/6 079E")
+	want(t, run(t, "tunnel", "connect", s.addr, "--user-id", "3", "--user-password", "pw3", "--udp", "--format", "json"), 0, `"individualAddress": "`+tunnelAddrs[1].String()+`"`)
+	want(t, run(t, append([]string{"group", "write", "1/2/6", "1", "--dpt", "9.001", "--tcp"}, sec...)...), 3, "--udp and --tcp")
+	want(t, run(t, "group", "write", "1/2/6", "1", "--dpt", "9.001", "--gateway", s.addr, "--udp"), 3, "--udp is for secure sessions")
+}
+
+// TestServeSecureRoutingFlags: --backbone-key is for routing. (go-knx's
+// server tests cover secure routing; serve's default group is not
+// usable in tests.)
+func TestServeSecureRoutingFlags(t *testing.T) {
+	want(t, run(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--backbone-key", "000102030405060708090a0b0c0d0e0f"), 3, "needs --routing")
+	want(t, run(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--routing", "--backbone-key", "xyz"), 3, "--backbone-key")
 }
 
 func TestKeyringShow(t *testing.T) {

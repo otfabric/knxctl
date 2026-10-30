@@ -168,6 +168,7 @@ Flags:
       --nat                       Announce the route back endpoint (through NAT)
       --tcp                       Connect over TCP (KNXnet/IP core v2)
       --tunnel-address string     Request this tunnelling address (tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -241,6 +242,7 @@ Flags:
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -283,6 +285,7 @@ Flags:
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -325,6 +328,7 @@ Flags:
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -369,6 +373,7 @@ Flags:
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -410,6 +415,7 @@ Flags:
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -452,6 +458,7 @@ Flags:
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
       --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -722,6 +729,7 @@ Flags:
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --nat                       Announce the route back endpoint (through NAT)
       --tcp                       Connect over TCP
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -786,6 +794,7 @@ Flags:
       --nat                       Announce the route back endpoint (through NAT)
       --start uint16              First element (0: the number of elements) (default 1)
       --tcp                       Connect over TCP
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
@@ -873,6 +882,7 @@ Examples:
 
 Flags:
       --address string            Individual address of the server (default 15.15.0)
+      --backbone-key string       KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY)
       --concurrent-busmonitor     Let busmonitor connections coexist with tunnels (simulators)
       --config string             JSON configuration file (docs/serve.md)
       --device-address string     Individual address of the --object device (default "1.1.1")
