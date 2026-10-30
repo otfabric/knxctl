@@ -75,14 +75,19 @@ Examples:
   knxctl discover
   knxctl discover --interface eth0 --timeout 2s
   knxctl discover --extended --format json
+  knxctl discover --programming-mode
+  knxctl discover --service tunnelling:2
   knxctl discover --unicast 192.168.1.10
 
 Flags:
-      --extended         Send SEARCH_REQUEST_EXTENDED (KNXnet/IP core v2)
-  -h, --help             help for discover
-      --nat              Announce the route back endpoint (directed search through NAT)
-      --repeat int       Send the search 1..3 times, one second apart (default 1)
-      --unicast string   Directed search of one server, host[:port]
+      --extended           Send SEARCH_REQUEST_EXTENDED (KNXnet/IP core v2)
+  -h, --help               help for discover
+      --mac string         Only the server with this MAC address, aa:bb:cc:dd:ee:ff (extended search)
+      --nat                Announce the route back endpoint (directed search through NAT)
+      --programming-mode   Only servers in programming mode (extended search)
+      --repeat int         Send the search 1..3 times, one second apart (default 1)
+      --service string     Only servers with this service family and at least this version, family[:version] (extended search; core, devmgmt, tunnelling, routing, security...)
+      --unicast string     Directed search of one server, host[:port]
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -128,6 +133,7 @@ Usage:
 
 Available Commands:
   connect     Open a tunnelling connection, report it and disconnect
+  feature     Tunnelling v2 interface feature services (TUNNELLING_FEATURE_GET/_SET)
 
 Flags:
   -h, --help   help for tunnel
@@ -168,6 +174,93 @@ Flags:
       --nat                       Announce the route back endpoint (through NAT)
       --tcp                       Connect over TCP (KNXnet/IP core v2)
       --tunnel-address string     Request this tunnelling address (tunnelling v2 servers)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+
+Global Flags:
+      --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
+  -i, --interface string    Network interface for multicast and the announced address
+      --local-addr string   Local address to bind (IP or IP:port)
+  -q, --quiet               Log nothing to stderr
+      --timeout duration    Timeout of each request (search window, connect, read) (default 5s)
+  -v, --verbose count       Log protocol events to stderr (-v info, -vv debug)
+```
+
+## knxctl tunnel feature
+
+```text
+Tunnelling v2 interface feature services (TUNNELLING_FEATURE_GET/_SET)
+
+Usage:
+  knxctl tunnel feature [command]
+
+Available Commands:
+  get         Read an interface feature of a tunnelling v2 server
+  set         Write an interface feature of a tunnelling v2 server (info-service)
+
+Flags:
+  -h, --help   help for feature
+
+Global Flags:
+      --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
+  -i, --interface string    Network interface for multicast and the announced address
+      --local-addr string   Local address to bind (IP or IP:port)
+  -q, --quiet               Log nothing to stderr
+      --timeout duration    Timeout of each request (search window, connect, read) (default 5s)
+  -v, --verbose count       Log protocol events to stderr (-v info, -vv debug)
+
+Use "knxctl tunnel feature [command] --help" for more information about a command.
+```
+
+## knxctl tunnel feature get
+
+```text
+Open a tunnelling connection (TCP by default) and read a feature: active-emi, address, bus-connection, device-descriptor, info-service, manufacturer, max-apdu, supported-emi, or a feature number. Nothing is sent onto the KNX network.
+
+Usage:
+  knxctl tunnel feature get host[:port] <feature> [flags]
+
+Examples:
+  knxctl tunnel feature get 192.168.1.10 max-apdu
+  knxctl tunnel feature get 192.168.1.10 bus-connection --udp
+
+Flags:
+      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
+      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
+  -h, --help                      help for get
+      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+
+Global Flags:
+      --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
+  -i, --interface string    Network interface for multicast and the announced address
+      --local-addr string   Local address to bind (IP or IP:port)
+  -q, --quiet               Log nothing to stderr
+      --timeout duration    Timeout of each request (search window, connect, read) (default 5s)
+  -v, --verbose count       Log protocol events to stderr (-v info, -vv debug)
+```
+
+## knxctl tunnel feature set
+
+```text
+Write an interface feature of a tunnelling v2 server (info-service)
+
+Usage:
+  knxctl tunnel feature set host[:port] <feature> <hex value> [flags]
+
+Examples:
+  knxctl tunnel feature set 192.168.1.10 info-service 01
+
+Flags:
+      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
+      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
+  -h, --help                      help for set
+      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
@@ -236,6 +329,7 @@ Flags:
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
       --raw string                Send these octets (hexadecimal) instead of a value
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                     With --raw: send one octet 00..3F in the APCI (6-bit value)
@@ -279,6 +373,7 @@ Flags:
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
       --raw string                Send these octets (hexadecimal) instead of a value
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                     With --raw: send one octet 00..3F in the APCI (6-bit value)
@@ -324,6 +419,7 @@ Flags:
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
@@ -367,6 +463,7 @@ Flags:
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
       --raw string                Answer with these octets (hexadecimal)
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                     With --raw: one octet 00..3F in the APCI
@@ -411,6 +508,7 @@ Flags:
       --map stringArray           Decode a group with a datapoint type: group=dpt (repeatable)
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
@@ -454,6 +552,7 @@ Flags:
       --map stringArray           Decode a group with a datapoint type: group=dpt (repeatable)
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
       --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
@@ -508,12 +607,15 @@ Examples:
   knxctl routing monitor --interface eth0 --map 1/2/4=9.001
 
 Flags:
-  -n, --count int           Stop after this many telegrams
-  -t, --dpt string          Decode every group with this datapoint type
-      --duration duration   Stop after this time
-  -h, --help                help for monitor
-      --map stringArray     Decode a group with a datapoint type: group=dpt (repeatable)
-      --multicast string    Routing multicast group (default "224.0.23.12:3671")
+      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
+  -n, --count int                 Stop after this many telegrams
+  -t, --dpt string                Decode every group with this datapoint type
+      --duration duration         Stop after this time
+  -h, --help                      help for monitor
+      --keyring string            ETS keyring (.knxkeys) with the backbone key and the Data Secure group keys (env KNXCTL_KEYRING)
+      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
+      --map stringArray           Decode a group with a datapoint type: group=dpt (repeatable)
+      --multicast string          Routing multicast group (default "224.0.23.12:3671")
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -540,8 +642,16 @@ Examples:
   knxctl diagnose 192.168.1.10 --format json
 
 Flags:
-  -h, --help   help for diagnose
-      --nat    Announce route back endpoints (through NAT)
+      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
+      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
+  -h, --help                      help for diagnose
+      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
+      --nat                       Announce route back endpoints (through NAT)
+      --tcp                       Tunnel over TCP (KNXnet/IP core v2)
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -752,6 +862,7 @@ Usage:
 
 Available Commands:
   read        Read a property with local device management (M_PropRead)
+  write       Write a property with local device management (M_PropWrite)
 
 Flags:
   -h, --help   help for property
@@ -793,6 +904,45 @@ Flags:
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --nat                       Announce the route back endpoint (through NAT)
       --start uint16              First element (0: the number of elements) (default 1)
+      --tcp                       Connect over TCP
+      --udp                       Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+
+Global Flags:
+      --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
+  -i, --interface string    Network interface for multicast and the announced address
+      --local-addr string   Local address to bind (IP or IP:port)
+  -q, --quiet               Log nothing to stderr
+      --timeout duration    Timeout of each request (search window, connect, read) (default 5s)
+  -v, --verbose count       Log protocol events to stderr (-v info, -vv debug)
+```
+
+## knxctl property write
+
+```text
+Open a device management connection and write count elements of a property
+from element start; the data holds the count elements, hexadecimal. The server
+answers with the written elements, or with none when it refuses (read only,
+wrong type or length). This changes the server's configuration.
+
+Usage:
+  knxctl property write host[:port] <object> <pid> <hex data> [flags]
+
+Examples:
+  knxctl property write 192.168.1.10 device 54 01 --user-id 1   # programming mode on (PID_PROG_MODE)
+  knxctl property write 192.168.1.10 knxnetip 76 6B6E7863746C --count 6
+
+Flags:
+      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
+      --count uint8               Number of elements (1..15) (default 1)
+      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
+  -h, --help                      help for write
+      --instance uint8            Object instance (default 1)
+      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
+      --nat                       Announce the route back endpoint (through NAT)
+      --start uint16              First element (default 1)
       --tcp                       Connect over TCP
       --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
@@ -892,12 +1042,15 @@ Flags:
       --keyring-host string       Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
       --listen string             UDP address to listen on (default ":3671")
+      --multicast string          Multicast group of routing (default "224.0.23.12:3671")
       --name string               Friendly name (default "knxctl serve")
       --no-discovery              Do not join the multicast group for search requests
       --no-tcp                    Do not accept KNXnet/IP over TCP
       --object stringArray        Group object group[+group]:dpt[:flags][=value] (repeatable; flags default CRWU)
+      --programming-mode          Announce programming mode in DEVICE_INFO (search and description)
       --routing                   Route telegrams over IP multicast too
       --secure-user stringArray   KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)
+      --serial string             KNX serial number, 12 hex digits (default 00FA00000001)
       --tunnels strings           Tunnelling addresses, one per connection (default 15.15.250)
 
 Global Flags:

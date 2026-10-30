@@ -92,7 +92,7 @@ is sent onto the KNX network.`,
 	connect.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP (KNXnet/IP core v2)")
 	connect.Flags().StringVar(&ia, "tunnel-address", "", "Request this tunnelling address (tunnelling v2 servers)")
 	sec.add(connect.Flags())
-	cmd.AddCommand(connect)
+	cmd.AddCommand(connect, newTunnelFeatureCmd(a))
 	return cmd
 }
 
@@ -142,7 +142,8 @@ func (d diagnoseResult) Rows() [][]string {
 }
 
 func newDiagnoseCmd(a *app) *cobra.Command {
-	var nat bool
+	var nat, tcp bool
+	var sec secureFlags
 	cmd := &cobra.Command{
 		Use:   "diagnose host[:port]",
 		Short: "Check a KNXnet/IP server: description, services, tunnelling, heartbeat",
@@ -200,11 +201,36 @@ network. Exits 1 when a check fails.`,
 				}
 				return fmt.Sprintf("tunnelling v%d", v), nil
 			})
+			cred, cerr := sec.credentials("")
+			if cerr != nil {
+				return cerr
+			}
+			if secured, ok := dibs.SecuredServices(); ok && len(secured.Families) > 0 {
+				run("security", func() (string, error) {
+					var names []string
+					for _, f := range secured.Families {
+						names = append(names, fmt.Sprintf("%s v%d", f.ID, f.Version))
+					}
+					detail := "secured services: " + strings.Join(names, ", ")
+					if _, tun := secured.Version(knxnetip.FamilyTunnelling); tun && cred == nil {
+						return "", fmt.Errorf("%s; tunnelling needs a secure session (--keyring or --user-id)", detail)
+					}
+					return detail, nil
+				})
+			}
 			var conn *tunnel.Conn
 			run("tunnel connect", func() (string, error) {
 				var err error
-				conn, err = tunnel.Dial(ctx, args[0], tunnel.WithNAT(nat), tunnel.WithConnectTimeout(a.timeout), tunnel.WithLogger(a.logger),
-					tunnel.WithHeartbeat(500*time.Millisecond, a.timeout, 1))
+				opts := []tunnel.Option{tunnel.WithNAT(nat), tunnel.WithConnectTimeout(a.timeout), tunnel.WithLogger(a.logger),
+					tunnel.WithHeartbeat(500*time.Millisecond, a.timeout, 1)}
+				if tcp {
+					opts = append(opts, tunnel.WithTCP())
+				}
+				opts, err = sec.tunnelOptions(opts, "")
+				if err != nil {
+					return "", err
+				}
+				conn, err = tunnel.Dial(ctx, args[0], opts...)
 				if err != nil {
 					return "", err
 				}
@@ -235,5 +261,7 @@ network. Exits 1 when a check fails.`,
 		},
 	}
 	cmd.Flags().BoolVar(&nat, "nat", false, "Announce route back endpoints (through NAT)")
+	cmd.Flags().BoolVar(&tcp, "tcp", false, "Tunnel over TCP (KNXnet/IP core v2)")
+	sec.add(cmd.Flags())
 	return cmd
 }

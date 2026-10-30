@@ -77,15 +77,7 @@ parameter object). Nothing is sent onto the KNX network.`,
 			if count < 1 || count > 15 || start > 0x0FFF {
 				return errs.Invalid("--count is 1..15, --start 0..4095")
 			}
-			opts := []tunnel.Option{tunnel.WithLogger(a.logger), tunnel.WithConnectTimeout(a.timeout), tunnel.WithNAT(nat)}
-			if tcp {
-				opts = append(opts, tunnel.WithTCP())
-			}
-			opts, err = sec.tunnelOptions(opts, "")
-			if err != nil {
-				return err
-			}
-			c, err := devmgmt.Dial(cmd.Context(), args[0], opts...)
+			c, err := dialDevMgmt(cmd, a, args[0], tcp, nat, &sec)
 			if err != nil {
 				return err
 			}
@@ -113,6 +105,73 @@ parameter object). Nothing is sent onto the KNX network.`,
 	read.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP")
 	sec.add(read.Flags())
 	read.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (through NAT)")
-	cmd.AddCommand(read)
+	cmd.AddCommand(read, newPropertyWriteCmd(a))
 	return cmd
+}
+
+// dialDevMgmt opens a device management connection.
+func dialDevMgmt(cmd *cobra.Command, a *app, host string, tcp, nat bool, sec *secureFlags) (*devmgmt.Conn, error) {
+	opts := []tunnel.Option{tunnel.WithLogger(a.logger), tunnel.WithConnectTimeout(a.timeout), tunnel.WithNAT(nat)}
+	if tcp {
+		opts = append(opts, tunnel.WithTCP())
+	}
+	opts, err := sec.tunnelOptions(opts, "")
+	if err != nil {
+		return nil, err
+	}
+	return devmgmt.Dial(cmd.Context(), host, opts...)
+}
+
+func newPropertyWriteCmd(a *app) *cobra.Command {
+	var sec secureFlags
+	var instance, count uint8
+	var start uint16
+	var tcp, nat bool
+	write := &cobra.Command{
+		Use:   "write host[:port] <object> <pid> <hex data>",
+		Short: "Write a property with local device management (M_PropWrite)",
+		Long: `Open a device management connection and write count elements of a property
+from element start; the data holds the count elements, hexadecimal. The server
+answers with the written elements, or with none when it refuses (read only,
+wrong type or length). This changes the server's configuration.`,
+		Example: `  knxctl property write 192.168.1.10 device 54 01 --user-id 1   # programming mode on (PID_PROG_MODE)
+  knxctl property write 192.168.1.10 knxnetip 76 6B6E7863746C --count 6`,
+		Args: cobra.ExactArgs(4),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			obj, err := parseObjectType(args[1])
+			if err != nil {
+				return err
+			}
+			pid, err := strconv.ParseUint(args[2], 0, 8)
+			if err != nil {
+				return errs.Invalid("property id %q: 0..255", args[2])
+			}
+			data, err := hex.DecodeString(strings.ReplaceAll(args[3], " ", ""))
+			if err != nil || len(data) == 0 {
+				return errs.Invalid("data %q: hexadecimal octets", args[3])
+			}
+			if count < 1 || count > 15 || start < 1 || start > 0x0FFF {
+				return errs.Invalid("--count is 1..15, --start 1..4095")
+			}
+			if len(data)%int(count) != 0 {
+				return errs.Invalid("%d octets do not divide into %d elements", len(data), count)
+			}
+			c, err := dialDevMgmt(cmd, a, args[0], tcp, nat, &sec)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = c.Close() }()
+			if err := c.PropWrite(cmd.Context(), obj, instance, uint8(pid), start, count, data); err != nil {
+				return err
+			}
+			return a.emit("property write", propertyResult{Server: args[0], ObjectType: obj, Instance: instance, PropertyID: uint8(pid), Start: start, Count: count, Data: strings.ToUpper(hex.EncodeToString(data))})
+		},
+	}
+	write.Flags().Uint8Var(&instance, "instance", 1, "Object instance")
+	write.Flags().Uint16Var(&start, "start", 1, "First element")
+	write.Flags().Uint8Var(&count, "count", 1, "Number of elements (1..15)")
+	write.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP")
+	write.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (through NAT)")
+	sec.add(write.Flags())
+	return write
 }

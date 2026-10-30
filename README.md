@@ -59,7 +59,7 @@ Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
 
 | Command | | Sends telegrams? |
 |---------|-|:-:|
-| `discover` | Find KNXnet/IP servers (multicast search, or `--unicast` directed search) | no |
+| `discover` | Find KNXnet/IP servers (multicast search, or `--unicast` directed search; `--programming-mode`, `--mac`, `--service` filters) | no |
 | `describe host` | Read a server's self description | no |
 | `tunnel connect host` | Open a tunnelling connection, report it, disconnect | no |
 | `diagnose host` | Check search, description, services, tunnelling, heartbeat | no |
@@ -68,6 +68,8 @@ Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
 | `routing monitor` | Print the routing indications on the multicast group | no |
 | `busmonitor host` | Print every bus frame through a busmonitor connection | no |
 | `property read host object pid` | Read an interface object property (device management) | no |
+| `property write host object pid hex` | Write an interface object property (device management) | configures the server |
+| `tunnel feature get/set host feature` | Tunnelling v2 interface features (max APDU, bus connection, info service...) | no |
 | `group write group value` | Send A_GroupValue_Write | **yes** |
 | `group respond group value` | Send A_GroupValue_Response | **yes** |
 | `group read group` | Send A_GroupValue_Read and print the response | **yes** |

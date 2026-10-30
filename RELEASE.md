@@ -6,6 +6,37 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.5.0
+
+**Date:** 2026-10-30
+**Previous release:** v0.4.0
+
+## Summary
+
+On go-knx v0.4.1, the go-knx API features that were missing from the CLI.
+
+## Additions
+
+- `property write host object pid hex`: M_PropWrite (`--start`, `--count`,
+  `--instance`).
+- `tunnel feature get|set host feature`: the tunnelling v2 feature
+  services, by name (max-apdu, bus-connection, address, info-service...)
+  or number; TCP by default, `--udp` for UDP.
+- `discover --programming-mode`, `--mac`, `--service family[:version]`:
+  extended search with search parameters.
+- `routing monitor --keyring/--backbone-key`: secure routing and Data
+  Secure, like `monitor --routing`.
+- `diagnose --tcp` and the secure session flags; a `security` check lists
+  the secured services and tells when tunnelling needs a secure session.
+- `--priority` on the commands that send telegrams.
+- `serve --programming-mode`, `--serial`, `--multicast`.
+
+## Fixes
+
+- go-knx v0.4.1: a server on an ephemeral port keeps TCP.
+
+---
+
 ## v0.4.0
 
 **Date:** 2026-10-30

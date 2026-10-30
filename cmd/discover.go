@@ -4,6 +4,8 @@ package cmd
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 
 	"github.com/otfabric/go-knx/discovery"
@@ -149,8 +151,8 @@ func (d discoverResult) Rows() [][]string {
 }
 
 func newDiscoverCmd(a *app) *cobra.Command {
-	var extended, nat bool
-	var unicast string
+	var extended, nat, progMode bool
+	var unicast, mac, service string
 	var repeat int
 	cmd := &cobra.Command{
 		Use:   "discover",
@@ -164,6 +166,8 @@ does not; use --unicast or describe instead.`,
 		Example: `  knxctl discover
   knxctl discover --interface eth0 --timeout 2s
   knxctl discover --extended --format json
+  knxctl discover --programming-mode
+  knxctl discover --service tunnelling:2
   knxctl discover --unicast 192.168.1.10`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -177,8 +181,12 @@ does not; use --unicast or describe instead.`,
 			if unicast != "" {
 				opts = append(opts, discovery.WithUnicast(unicast))
 			}
-			if extended {
-				opts = append(opts, discovery.WithExtended())
+			params, err := searchParams(progMode, mac, service)
+			if err != nil {
+				return err
+			}
+			if extended || len(params) > 0 {
+				opts = append(opts, discovery.WithExtended(params...))
 			}
 			rs, err := discovery.Search(cmd.Context(), opts...)
 			if err != nil {
@@ -197,7 +205,51 @@ does not; use --unicast or describe instead.`,
 	cmd.Flags().StringVar(&unicast, "unicast", "", "Directed search of one server, host[:port]")
 	cmd.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (directed search through NAT)")
 	cmd.Flags().IntVar(&repeat, "repeat", 1, "Send the search 1..3 times, one second apart")
+	cmd.Flags().BoolVar(&progMode, "programming-mode", false, "Only servers in programming mode (extended search)")
+	cmd.Flags().StringVar(&mac, "mac", "", "Only the server with this MAC address, aa:bb:cc:dd:ee:ff (extended search)")
+	cmd.Flags().StringVar(&service, "service", "", "Only servers with this service family and at least this version, family[:version] (extended search; core, devmgmt, tunnelling, routing, security...)")
 	return cmd
+}
+
+// familyNames are the service family names of --service.
+var familyNames = map[string]knxnetip.ServiceFamilyID{
+	"core": knxnetip.FamilyCore, "devmgmt": knxnetip.FamilyDeviceManagement, "device-management": knxnetip.FamilyDeviceManagement,
+	"tunnelling": knxnetip.FamilyTunnelling, "tunneling": knxnetip.FamilyTunnelling, "routing": knxnetip.FamilyRouting,
+	"remote-logging": knxnetip.FamilyRemoteLogging, "remote-config": knxnetip.FamilyRemoteConfig,
+	"object-server": knxnetip.FamilyObjectServer, "security": knxnetip.FamilySecurity,
+}
+
+// searchParams builds the SEARCH_REQUEST_EXTENDED parameters of the
+// filter flags.
+func searchParams(progMode bool, mac, service string) ([]knxnetip.SearchParam, error) {
+	var ps []knxnetip.SearchParam
+	if progMode {
+		ps = append(ps, knxnetip.SearchParam{Type: knxnetip.SRPProgrammingMode, Mandatory: true})
+	}
+	if mac != "" {
+		hw, err := net.ParseMAC(mac)
+		if err != nil || len(hw) != 6 {
+			return nil, errs.Invalid("--mac %q: want aa:bb:cc:dd:ee:ff", mac)
+		}
+		ps = append(ps, knxnetip.SearchParam{Type: knxnetip.SRPMACAddress, Mandatory: true, Data: hw})
+	}
+	if service != "" {
+		name, ver, hasVer := strings.Cut(strings.ToLower(service), ":")
+		id, ok := familyNames[name]
+		if !ok {
+			return nil, errs.Invalid("--service %q: unknown service family", service)
+		}
+		v := 1
+		if hasVer {
+			n, err := strconv.Atoi(ver)
+			if err != nil || n < 1 || n > 255 {
+				return nil, errs.Invalid("--service %q: version 1..255", service)
+			}
+			v = n
+		}
+		ps = append(ps, knxnetip.SearchParam{Type: knxnetip.SRPService, Mandatory: true, Data: []byte{byte(id), byte(v)}})
+	}
+	return ps, nil
 }
 
 type describeResult struct {
