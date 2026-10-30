@@ -82,7 +82,7 @@ func TestTunnelConnect(t *testing.T) {
 	want(t, run(t, "tunnel", "connect", s.addr, "--tunnel-address", "x"), errs.ExitInvalidInput, "--tunnel-address")
 	// A tunnelling address the server does not have is refused.
 	r = run(t, "tunnel", "connect", s.addr, "--tunnel-address", "9.9.9", "--format", "json")
-	want(t, r, errs.ExitRejected)
+	want(t, r, errs.ExitProtocol)
 	if e := errorOf(t, r); e["kind"] != "rejected" {
 		t.Fatalf("error %v", e)
 	}

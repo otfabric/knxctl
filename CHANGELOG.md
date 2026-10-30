@@ -3,6 +3,12 @@
 All notable changes are listed here; release notes are in
 [RELEASE.md](RELEASE.md).
 
+## v0.7.0 (2026-10-30)
+
+Exit codes follow the organisation table: `permission` is 9 (was 7),
+`rejected` is 6 (was 9). `KNXCTL_OUTPUT_FORMAT` is accepted besides
+`KNXCTL_FORMAT`.
+
 ## v0.2.0 — 2026-10-29
 
 - `--tcp`, `busmonitor`, `property read`; `serve --no-tcp`, `--concurrent-busmonitor`.

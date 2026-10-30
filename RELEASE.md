@@ -6,6 +6,24 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.7.0
+
+**Date:** 2026-10-30
+**Previous release:** v0.6.0
+
+Exit codes converge on the organisation table (ADR-0006). **Scripts that test for these codes must change.**
+
+| Case | Old | New |
+|---|---|---|
+| Operating system refused an operation (`permission`) | 7 | 9 |
+| KNXnet/IP server refused the request (`rejected`) | 9 | 6 |
+
+All other codes are unchanged. The JSON `kind` values do not change: `rejected` stays `rejected`. Exit 7 is now reserved for a partial result, which knxctl does not produce today.
+
+`KNXCTL_OUTPUT_FORMAT` is now accepted besides `KNXCTL_FORMAT`, which is the canonical name and wins when both are set.
+
+---
+
 ## v0.6.0
 
 **Date:** 2026-10-30

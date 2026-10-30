@@ -121,3 +121,16 @@ func TestVerbosityFlags(t *testing.T) {
 		want(t, run(t, "dpt", "describe", "1.001", f), 0, "DPT_Switch")
 	}
 }
+
+// KNXCTL_OUTPUT_FORMAT is accepted; KNXCTL_FORMAT is canonical and wins.
+func TestOutputFormatEnv(t *testing.T) {
+	t.Setenv("KNXCTL_FORMAT", "")
+	t.Setenv("KNXCTL_OUTPUT_FORMAT", "json")
+	if r := run(t, "version"); !strings.Contains(r.out, `"schemaVersion"`) {
+		t.Fatalf("OUTPUT_FORMAT ignored: %q", r.out)
+	}
+	t.Setenv("KNXCTL_FORMAT", "text")
+	if r := run(t, "version"); strings.Contains(r.out, `"schemaVersion"`) {
+		t.Fatalf("FORMAT does not win: %q", r.out)
+	}
+}

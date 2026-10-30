@@ -1,6 +1,6 @@
 # JSON output
 
-`--format json` (or `KNXCTL_FORMAT=json`) makes every command machine
+`--format json` (or `KNXCTL_FORMAT=json`; `KNXCTL_OUTPUT_FORMAT` is accepted too, `_FORMAT` wins) makes every command machine
 readable. Every document carries `"schemaVersion": "1.0"`; the major version
 changes only with an incompatible change. Fields may be added in minor
 versions: ignore fields you do not know. Diagnostics (`-v`, progress lines

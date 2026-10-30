@@ -43,8 +43,8 @@ func TestRemoteProperty(t *testing.T) {
 	want(t, run(t, "property", "read", s.addr, "knxnetip", "76", "--count", "11", "--device", "1.1.0"), 0, `1.1.0 object 0x000B (index 2) property 76 [1..11]`, `"knxctl test"`)
 	want(t, run(t, "property", "read", s.addr, "device", "11", "--device", "1.1.0", "--connected", "--format", "json"), 0, `"objectIndex": 0`, `"device": "1.1.0"`)
 	want(t, run(t, "property", "write", s.addr, "knxnetip", "76", "6B6E78", "--count", "3", "--device", "1.1.0", "--connected"), 0, `"knx"`)
-	want(t, run(t, "property", "write", s.addr, "device", "11", "000000000000", "--device", "1.1.0"), 9)
-	want(t, run(t, "property", "read", s.addr, "0x0099", "1", "--device", "1.1.0"), 9, "no interface object")
+	want(t, run(t, "property", "write", s.addr, "device", "11", "000000000000", "--device", "1.1.0"), 6)
+	want(t, run(t, "property", "read", s.addr, "0x0099", "1", "--device", "1.1.0"), 6, "no interface object")
 	for _, args := range [][]string{
 		{"read", s.addr, "device", "11", "--connected"},
 		{"read", s.addr, "device", "11", "--tool-key", toolKeyHex},

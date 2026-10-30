@@ -47,7 +47,7 @@ func TestBusmonitorCommand(t *testing.T) {
 	ex := startServer(t)
 	hold := start(t, "tunnel", "connect", ex.addr, "--hold", "5s")
 	eventually(t, "the tunnel", func() bool { return len(ex.Connections()) == 1 })
-	want(t, run(t, "busmonitor", ex.addr, "--count", "1"), 9, "E_NO_MORE_CONNECTIONS")
+	want(t, run(t, "busmonitor", ex.addr, "--count", "1"), 6, "E_NO_MORE_CONNECTIONS")
 	hold.stop(t)
 }
 
@@ -58,7 +58,7 @@ func TestPropertyRead(t *testing.T) {
 	r = run(t, "property", "read", s.addr, "0x000B", "53", "--start", "0", "--tcp", "--format", "json")
 	want(t, r, 0, `"data": "0004"`)
 	r = run(t, "property", "read", s.addr, "device", "99")
-	want(t, r, 9, "void DP")
+	want(t, r, 6, "void DP")
 	want(t, run(t, "property", "read", s.addr, "nosuch", "1"), 3, "object")
 	want(t, run(t, "property", "read", s.addr, "device", "300"), 3, "property id")
 	want(t, run(t, "property", "read", s.addr, "device", "11", "--count", "0"), 3, "--count")
