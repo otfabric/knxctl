@@ -18,7 +18,8 @@ honoured also for usage errors.
 | 7 | `permission` | The operating system refused an operation (for example binding a privileged port) |
 | 8 | `unsupported` | The server or go-knx does not support what was asked |
 | 9 | `rejected` | The KNXnet/IP server refused the request: no free tunnelling slot, an unknown tunnelling address, busy (`code` `rejected` or `busy`) |
-| 10 | `output`, `internal` | The result could not be written, the command was interrupted before a result (`canceled`), or something unexpected happened |
+| 10 | `output`, `internal` | The result could not be written, or something unexpected happened |
+| 130 | `interrupted` | Ctrl-C (SIGINT) or SIGTERM stopped a command before it had a result, for example while connecting (`code` `canceled`). Streams stopped by Ctrl-C end with 0 |
 
 `kind` selects the exit code; `code` in the JSON error is a stable, finer
 identifier:
@@ -40,7 +41,8 @@ identifier:
 | `rejected` | `rejected` |
 | `busy` | `rejected` |
 | `output_failed` | `output` |
-| `canceled`, `internal_unexpected` | `internal` |
+| `canceled` | `interrupted` |
+| `internal_unexpected` | `internal` |
 
 **Transmitting commands** (`group write`, `group respond`, `group read`,
 `group answer`) parse and validate the address, datapoint type and value
