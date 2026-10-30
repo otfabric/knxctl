@@ -26,6 +26,7 @@ type secureFlags struct {
 	userPassword    string
 	devicePassword  string
 	backboneKey     string
+	udp             bool
 
 	kr *keyring.Keyring
 }
@@ -37,6 +38,7 @@ func (s *secureFlags) add(f *pflag.FlagSet) {
 	f.StringVar(&s.userPassword, "user-password", envOr("KNXCTL_USER_PASSWORD", ""), "Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)")
 	f.StringVar(&s.devicePassword, "device-password", envOr("KNXCTL_DEVICE_PASSWORD", ""), "Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)")
 	f.StringVar(&s.backboneKey, "backbone-key", envOr("KNXCTL_BACKBONE_KEY", ""), "KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)")
+	f.BoolVar(&s.udp, "udp", false, "Run a KNX IP Secure session over UDP instead of TCP")
 }
 
 // keyring loads the keyring once; nil without --keyring.
@@ -156,6 +158,11 @@ func (s *secureFlags) tunnelOptions(opts []tunnel.Option, tunnelIA string) ([]tu
 	}
 	if cred != nil {
 		opts = append(opts, tunnel.WithSecure(*cred))
+		if s.udp {
+			opts = append(opts, tunnel.WithUDP())
+		}
+	} else if s.udp {
+		return nil, errs.Invalid("--udp is for secure sessions (--user-id or --keyring)")
 	}
 	return opts, nil
 }

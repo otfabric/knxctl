@@ -167,6 +167,17 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 			if secOpt != nil {
 				opts = append(opts, secOpt)
 			}
+			if routing {
+				key, latency, ok, err := sec.backbone()
+				if err != nil {
+					return err
+				}
+				if ok {
+					opts = append(opts, server.WithSecureRouting(key, latency))
+				}
+			} else if sec.backboneKey != "" {
+				return errs.Invalid("--backbone-key needs --routing")
+			}
 			if len(cfg.Tunnels) > 0 && !cmd.Flags().Changed("tunnels") && config == "" {
 				opts = append(opts, server.WithTunnelAddresses(parseAddrs(cfg.Tunnels)...))
 			}
@@ -248,6 +259,7 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 	f.StringVar(&sec.devicePassword, "device-password", envOr("KNXCTL_DEVICE_PASSWORD", ""), "Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD)")
 	f.StringVar(&sec.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)")
 	f.StringVar(&sec.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
+	f.StringVar(&sec.backboneKey, "backbone-key", envOr("KNXCTL_BACKBONE_KEY", ""), "KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY)")
 	f.StringVar(&keyringHost, "keyring-host", "", "Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)")
 	return cmd
 }

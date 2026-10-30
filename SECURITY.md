@@ -52,7 +52,6 @@ output.
 knxctl uses go-knx's KNX IP Secure (secure tunnelling over TCP, secure
 routing) and KNX Data Secure (group communication). With security
 configured, knxctl never falls back to plain KNXnet/IP: a failed handshake
-is an error (exit code 6). Not covered: S-A_Sync (a device asking for
-knxctl's sequence number gets no answer), point to point Data Secure,
-secure sessions over UDP. The implementation follows public sources and is
+is an error (exit code 6). Not covered: general point to point Data
+Secure (knxctl answers S-A_Sync and acts as a surrogate only). The implementation follows public sources and is
 verified for interoperability with xknx and Calimero; it is not certified.

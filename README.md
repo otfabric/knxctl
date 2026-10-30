@@ -200,13 +200,17 @@ knxctl monitor --routing                                # secure routing with th
 KNXCTL_USER_PASSWORD=... knxctl tunnel connect 192.168.1.10 --user-id 2 --device-password ...
 knxctl serve --keyring project.knxkeys --keyring-host 1.1.0   # a secure simulator: the host's users
 knxctl serve --secure-user 2:secret:1.1.10 --device-password trustme
+knxctl group write 1/2/3 on --gateway 192.168.1.10 --user-id 2 --udp   # the secure session over UDP
+knxctl serve --routing --keyring project.knxkeys --keyring-host 1.1.0  # secure routing with the keyring's backbone key
 ```
 
 A keyring selects the tunnelling user by `--tunnel-address`, `--user-id`
 or as the first tunnelling user; user 1 is the host's management password
 (device management). Secured telegrams are marked `[secure]` (`"secure":
-true` in JSON). Data Secure covers group communication; knxctl does not
-answer S-A_Sync requests. The implementation follows public sources and is
+true` in JSON). Data Secure covers group communication; with a keyring
+device entry (tool key) for its own address, knxctl answers S-A_Sync and
+acts as the surrogate through which tools such as Calimero send secured
+group telegrams. The implementation follows public sources and is
 verified against xknx and Calimero, not certified (go-knx's
 [SPECIFICATIONS](https://github.com/otfabric/go-knx/blob/main/docs/standards/SPECIFICATIONS.md#knx-secure-sources)).
 
