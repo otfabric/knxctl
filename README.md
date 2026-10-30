@@ -1,7 +1,10 @@
 # knxctl
 
-[![CI](https://github.com/otfabric/knxctl/actions/workflows/ci.yml/badge.svg)](https://github.com/otfabric/knxctl/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/otfabric/knxctl/branch/main/graph/badge.svg)](https://codecov.io/gh/otfabric/knxctl)
+[![Go Version](https://img.shields.io/badge/Go-1.23%2B-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI Status](https://github.com/otfabric/knxctl/actions/workflows/ci.yml/badge.svg)](https://github.com/otfabric/knxctl/actions/workflows/ci.yml)
+[![Code Coverage](https://codecov.io/gh/otfabric/knxctl/graph/badge.svg)](https://codecov.io/gh/otfabric/knxctl)
+[![Latest Release](https://img.shields.io/github/v/release/otfabric/knxctl?label=release)](https://github.com/otfabric/knxctl/releases)
 
 A command-line tool for KNX over KNXnet/IP: discover gateways, inspect
 them, monitor group telegrams, read and switch group objects, encode and
