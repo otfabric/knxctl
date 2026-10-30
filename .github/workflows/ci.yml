@@ -16,8 +16,10 @@ jobs:
   # does not reach every hosted runner's loopback the same way, so coverage
   # is measured and uploaded by the Linux job (run-codecov: false here).
   ci:
-    uses: otfabric/.github/.github/workflows/go-ci.yml@v2
+    uses: otfabric/.github/.github/workflows/go-ci.yml@v2.1.0
     with:
+      run-govulncheck: true
+      coverage-min: "85"
       codecov-name: knxctl
       run-codecov: false
       go-versions: '["1.23", "1.24", "1.25", "1.26"]'
