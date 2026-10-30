@@ -32,10 +32,12 @@ knxctl sends nothing onto the KNX network unless the command says so:
   telegram reaches the KNX bus.
 - `monitor`, `group listen`, `routing monitor` and `busmonitor` only listen.
 - `property read` reads a server's interface object properties (local
-  device management); nothing reaches the KNX bus.
+  device management); nothing reaches the KNX bus. With `--device` it reads
+  a device on the KNX network (remote device management): those requests do
+  reach the bus.
 - `dpt` and `decode` work offline.
-- Only `group write`, `group respond`, `group answer` and `group read` send
-  telegrams (a read is a telegram that devices answer). They validate the
+- Only `group write`, `group respond`, `group answer`, `group read` and
+  `property read`/`write --device` send telegrams (a read is a telegram that devices answer). They validate the
   address, datapoint type and value before connecting: an invocation that
   exits 2 or 3 has sent nothing.
 
@@ -67,8 +69,8 @@ Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
 | `group listen [group...]` | Print the telegrams of some or all groups | no |
 | `routing monitor` | Print the routing indications on the multicast group | no |
 | `busmonitor host` | Print every bus frame through a busmonitor connection | no |
-| `property read host object pid` | Read an interface object property (device management) | no |
-| `property write host object pid hex` | Write an interface object property (device management) | configures the server |
+| `property read host object pid` | Read an interface object property (device management; `--device` for a device on the KNX network, secured with its tool key when known) | no (`--device`: a request to that device) |
+| `property write host object pid hex` | Write an interface object property (device management; `--device` as for read) | configures the server (`--device`: the device) |
 | `tunnel feature get/set host feature` | Tunnelling v2 interface features (max APDU, bus connection, info service...) | no |
 | `group write group value` | Send A_GroupValue_Write | **yes** |
 | `group respond group value` | Send A_GroupValue_Response | **yes** |
@@ -184,7 +186,18 @@ also serves ETS, Home Assistant, xknx and other KNXnet/IP clients. See
 knxctl busmonitor 192.168.1.10 --count 20       # raw TP1 frames, decoded
 knxctl property read 192.168.1.10 device 11     # serial number
 knxctl property read 192.168.1.10 knxnetip 76 --count 15 --tcp   # friendly name
+knxctl property read 192.168.1.10 device 11 --device 1.1.5        # serial number of device 1.1.5
+knxctl property read 192.168.1.10 device 11 --device 1.1.5 --connected --keyring site.knxkeys --keyring-password ...
 ```
+
+With `--device`, the request goes through a tunnel to that device on the KNX
+network (A_PropertyValue_Read/_Write, connectionless or with `--connected` in
+a transport connection); the object type is looked up in the device's
+interface object list. When the device has a tool key (`--tool-key`, or its
+entry in `--keyring`), the access is secured with KNX Data Secure (S-A_Sync,
+then S-A_Data with tool access) and never falls back to plain. `knxctl serve
+--tool-key HEX|keyring` makes the simulator's own device accept only such
+secured access.
 
 A busmonitor connection is exclusive on a KNX interface: it cannot be opened
 while a tunnel is connected, and blocks tunnels while it is open. `knxctl serve

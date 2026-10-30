@@ -28,7 +28,7 @@ func TestDiscoverFilters(t *testing.T) {
 
 func TestPropertyWrite(t *testing.T) {
 	s := startServer(t)
-	// go-knx's server properties are read only: the write is refused.
+	// The device object of go-knx's server is read only: the write is refused.
 	r := run(t, "property", "write", s.addr, "device", "54", "01")
 	if r.code == 0 {
 		t.Fatalf("write of a read-only property succeeded: %s", r.out)

@@ -6,6 +6,32 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.6.0
+
+**Date:** 2026-10-30
+**Previous release:** v0.5.1
+
+## Added
+
+- `property read` and `property write --device IA`: remote device
+  management of a device on the KNX network through a tunnel
+  (A_PropertyValue_Read/_Write; the object type is found in the device's
+  interface object list), connectionless or with `--connected` in a
+  transport connection.
+- KNX Data Secure tool access: with the device's tool key (`--tool-key`,
+  env `KNXCTL_TOOL_KEY`, or the device's entry in `--keyring`) the access is
+  secured (S-A_Sync, then S-A_Data with tool access); results report
+  `secured`.
+- `serve --tool-key HEX|keyring`: the simulator's own device accepts only
+  remote management secured with that tool key. The simulator's device now
+  answers remote device management, and its friendly name is writable.
+
+## Changes
+
+- go-knx v0.5.0.
+
+---
+
 ## v0.5.1
 
 **Date:** 2026-10-30
