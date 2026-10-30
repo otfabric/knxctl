@@ -17,7 +17,7 @@ func TestExitCodes(t *testing.T) {
 	for k, want := range map[Kind]int{
 		KindUsage: ExitUsage, KindInvalidInput: ExitInvalidInput, KindTransport: ExitTransport,
 		KindTimeout: ExitTimeout, KindProtocol: ExitProtocol, KindPermission: ExitPermission,
-		KindUnsupported: ExitUnsupported, KindRejected: ExitRejected, KindOutput: ExitInternal,
+		KindUnsupported: ExitUnsupported, KindRejected: ExitProtocol, KindOutput: ExitInternal,
 		KindInternal:    ExitInternal,
 		KindInterrupted: ExitInterrupted,
 	} {

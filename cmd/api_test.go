@@ -50,7 +50,7 @@ func TestTunnelFeature(t *testing.T) {
 	want(t, run(t, "tunnel", "feature", "get", s.addr, "address", "--format", "json"), 0, `"feature": "address"`)
 	want(t, run(t, "tunnel", "feature", "get", s.addr, "1", "--udp"), 0, "supported-emi (0x01): 0004")
 	want(t, run(t, "tunnel", "feature", "set", s.addr, "info-service", "01"), 0, "set to 01")
-	want(t, run(t, "tunnel", "feature", "set", s.addr, "max-apdu", "0010"), 9)
+	want(t, run(t, "tunnel", "feature", "set", s.addr, "max-apdu", "0010"), 6)
 	want(t, run(t, "tunnel", "feature", "get", s.addr, "nope"), 3, "supported-emi")
 	want(t, run(t, "tunnel", "feature", "set", s.addr, "info-service", "zz"), 3)
 	// Secure.

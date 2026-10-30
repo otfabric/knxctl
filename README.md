@@ -264,7 +264,7 @@ knxctl has no configuration file. Two environment variables set defaults:
 
 | Variable | |
 |----------|-|
-| `KNXCTL_FORMAT` | Default `--format` (`json` for scripts) |
+| `KNXCTL_FORMAT` | Default `--format` (`json` for scripts); `KNXCTL_OUTPUT_FORMAT` is accepted too, `KNXCTL_FORMAT` wins |
 | `KNXCTL_GATEWAY` | Default `--gateway`, so that `knxctl group read 1/2/4` needs no flag |
 | `KNXCTL_KEYRING`, `KNXCTL_KEYRING_PASSWORD` | Default `--keyring` and its password |
 | `KNXCTL_USER_PASSWORD`, `KNXCTL_DEVICE_PASSWORD`, `KNXCTL_BACKBONE_KEY` | Secure tunnelling and routing secrets without a keyring |
@@ -295,7 +295,7 @@ are stable: [docs/exitcodes.md](docs/exitcodes.md).
   router): add `--nat`. knxctl then announces the route back endpoint
   0.0.0.0:0 and the server answers to where the request came from; the
   server must support route back endpoints (`knxctl serve` does).
-- **Connect is refused (exit 9).** Every tunnelling slot is in use: close
+- **Connect is refused (exit 6).** Every tunnelling slot is in use: close
   other clients (ETS, visualisations) or wait for stale connections to time
   out (120 s). `describe` lists the slots on servers that report them.
 - **`group read` times out (exit 5).** No device with the R flag on that

@@ -46,10 +46,27 @@ type app struct {
 	logger  knx.Logger
 }
 
+// formatEnv returns the default of --format from the environment:
+// KNXCTL_FORMAT, the canonical name, or else KNXCTL_OUTPUT_FORMAT.
+func formatEnv() string {
+	if v := os.Getenv("KNXCTL_FORMAT"); v != "" {
+		return v
+	}
+	return os.Getenv("KNXCTL_OUTPUT_FORMAT")
+}
+
+// formatDefault is the default of --format.
+func formatDefault() string {
+	if v := formatEnv(); v != "" {
+		return v
+	}
+	return "text"
+}
+
 // formatOf reads --format before anything else, so that usage errors can
 // follow it too.
 func formatOf(args []string) output.Format {
-	v := os.Getenv("KNXCTL_FORMAT")
+	v := formatEnv()
 	for i, a := range args {
 		switch {
 		case a == "--":
@@ -121,7 +138,7 @@ go to stderr. Exit codes: docs/exitcodes.md.`,
 		},
 	}
 	pf := root.PersistentFlags()
-	pf.String("format", envOr("KNXCTL_FORMAT", "text"), "Output format: text, json or table (env KNXCTL_FORMAT)")
+	pf.String("format", formatDefault(), "Output format: text, json or table (env KNXCTL_FORMAT)")
 	_ = root.RegisterFlagCompletionFunc("format", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"text\thuman-readable", "json\tversioned JSON", "table\taligned columns"}, cobra.ShellCompDirectiveNoFileComp
 	})

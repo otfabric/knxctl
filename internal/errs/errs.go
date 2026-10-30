@@ -43,9 +43,8 @@ const (
 	ExitTransport    = 4
 	ExitTimeout      = 5
 	ExitProtocol     = 6
-	ExitPermission   = 7
 	ExitUnsupported  = 8
-	ExitRejected     = 9
+	ExitPermission   = 9
 	ExitInternal     = 10
 	ExitInterrupted  = 130 // 128 + SIGINT, as a shell reports it
 )
@@ -106,14 +105,12 @@ func ExitCode(k Kind) int {
 		return ExitTransport
 	case KindTimeout:
 		return ExitTimeout
-	case KindProtocol:
+	case KindProtocol, KindRejected:
 		return ExitProtocol
 	case KindPermission:
 		return ExitPermission
 	case KindUnsupported:
 		return ExitUnsupported
-	case KindRejected:
-		return ExitRejected
 	case KindInterrupted:
 		return ExitInterrupted
 	default:
