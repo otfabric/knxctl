@@ -93,7 +93,7 @@ func newServeCmd(a *app) *cobra.Command {
 	var tunnels, objects, secureUsers []string
 	var routing, noDiscovery, noTCP, concurrentBusmon bool
 	var sec secureFlags
-	var keyringHost, serial, multicast string
+	var keyringHost, serial, multicast, toolKey string
 	var progMode bool
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -103,7 +103,10 @@ routing) with a virtual KNX network behind it: telegrams of one tunnelling
 client reach the other clients and the virtual group objects, which store
 written values and answer reads according to their flags. Every telegram is
 printed. This is a simulator for development and tests; it does not emulate a
-physical KNX line or device management.
+physical KNX line. The server's own device (--address) answers local device
+management and remote device management (property read, write and description)
+through a tunnel; with --tool-key only secured with that tool key (KNX Data
+Secure tool access).
 
 Group objects come from --object group[+group]:dpt[:flags][=value] on a
 device at --device-address, or from a JSON file (--config, docs/serve.md).`,
@@ -195,6 +198,13 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 			if cfg.Address != "" && !cmd.Flags().Changed("address") && config == "" {
 				opts = append(opts, server.WithIndividualAddress(knx.MustParseIndividualAddress(cfg.Address)))
 			}
+			if toolKey != "" {
+				k, err := serveToolKey(&sec, toolKey, cfg.Address)
+				if err != nil {
+					return err
+				}
+				opts = append(opts, server.WithToolKey(k))
+			}
 			s, err := server.New(opts...)
 			if err != nil {
 				return err
@@ -275,7 +285,41 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 	f.StringVar(&serial, "serial", "", "KNX serial number, 12 hex digits (default 00FA00000001)")
 	f.StringVar(&multicast, "multicast", "224.0.23.12:3671", "Multicast group of routing")
 	f.StringVar(&keyringHost, "keyring-host", "", "Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)")
+	f.StringVar(&toolKey, "tool-key", envOr("KNXCTL_TOOL_KEY", ""), "Secure the remote device management of the server's device with this tool key, 32 hex digits, or \"keyring\" for its tool key in --keyring (env KNXCTL_TOOL_KEY)")
 	return cmd
+}
+
+// serveToolKey returns the tool key of --tool-key: hex digits, or the
+// keyring's tool key of the server's device (address, default 15.15.0).
+func serveToolKey(sec *secureFlags, v, address string) (datasecure.Key, error) {
+	var k datasecure.Key
+	if v != "keyring" {
+		b, err := hex.DecodeString(v)
+		if err != nil || len(b) != len(k) {
+			return k, errs.Invalid("--tool-key: want 32 hex digits or keyring")
+		}
+		copy(k[:], b)
+		return k, nil
+	}
+	kr, err := sec.keyring()
+	if err != nil {
+		return k, err
+	}
+	if kr == nil {
+		return k, errs.Invalid("--tool-key keyring needs --keyring")
+	}
+	if address == "" {
+		address = "15.15.0"
+	}
+	ia, err := knx.ParseIndividualAddress(address)
+	if err != nil {
+		return k, errs.Invalid("--address: %v", err)
+	}
+	d := kr.Device(ia)
+	if d == nil || !d.HasToolKey {
+		return k, errs.Invalid("--tool-key keyring: the keyring has no tool key of %s", ia)
+	}
+	return datasecure.Key(d.ToolKey), nil
 }
 
 func parseAddrs(ss []string) []knx.IndividualAddress {

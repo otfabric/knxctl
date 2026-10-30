@@ -40,7 +40,7 @@ Available Commands:
   help        Help about any command
   keyring     Inspect KNX keyrings (.knxkeys)
   monitor     Print every group telegram (passive)
-  property    Interface object properties of a KNXnet/IP server (device management)
+  property    Interface object properties of a KNXnet/IP server or of a device on the KNX network
   routing     KNXnet/IP routing (IP multicast)
   serve       Run a simulated KNXnet/IP server with virtual group objects
   tunnel      KNXnet/IP tunnelling connections
@@ -855,14 +855,14 @@ Global Flags:
 ## knxctl property
 
 ```text
-Interface object properties of a KNXnet/IP server (device management)
+Interface object properties of a KNXnet/IP server or of a device on the KNX network
 
 Usage:
   knxctl property [command]
 
 Available Commands:
-  read        Read a property with local device management (M_PropRead)
-  write       Write a property with local device management (M_PropWrite)
+  read        Read a property (local M_PropRead, or A_PropertyValue_Read of a device with --device)
+  write       Write a property (local M_PropWrite, or A_PropertyValue_Write of a device with --device)
 
 Flags:
   -h, --help   help for property
@@ -886,6 +886,12 @@ from element start (start 0 reads the number of elements). The object is a type
 number or device (0x0000), router (0x0006) or knxnetip (0x000B, the KNXnet/IP
 parameter object). Nothing is sent onto the KNX network.
 
+With --device the property is read from that device on the KNX network instead,
+through a tunnel (remote device management): the object type is looked up in the
+device's interface object list. A device with a tool key (--tool-key, or in
+--keyring) is accessed with KNX Data Secure (S-A_Sync, then S-A_Data with tool
+access); --connected uses a transport connection.
+
 Usage:
   knxctl property read host[:port] <object> <pid> [flags]
 
@@ -893,10 +899,14 @@ Examples:
   knxctl property read 192.168.1.10 device 11          # serial number
   knxctl property read 192.168.1.10 knxnetip 76 --count 30   # friendly name
   knxctl property read 192.168.1.10 knxnetip 53 --start 0     # number of tunnelling addresses
+  knxctl property read 192.168.1.10 device 11 --device 1.1.5  # serial number of device 1.1.5
+  knxctl property read 192.168.1.10 device 11 --device 1.1.5 --keyring p.knxkeys --keyring-password ...   # secured with its tool key
 
 Flags:
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
+      --connected                 With --device: access the device in a transport connection (default connectionless)
       --count uint8               Number of elements (1..15) (default 1)
+      --device string             Individual address of a device on the KNX network: remote device management (A_PropertyValue_*) through a tunnel instead of the server's local device management
       --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
   -h, --help                      help for read
       --instance uint8            Object instance (default 1)
@@ -905,6 +915,7 @@ Flags:
       --nat                       Announce the route back endpoint (through NAT)
       --start uint16              First element (0: the number of elements) (default 1)
       --tcp                       Connect over TCP
+      --tool-key string           With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any) (env KNXCTL_TOOL_KEY)
       --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
@@ -926,16 +937,24 @@ from element start; the data holds the count elements, hexadecimal. The server
 answers with the written elements, or with none when it refuses (read only,
 wrong type or length). This changes the server's configuration.
 
+With --device the property of that device on the KNX network is written
+instead, through a tunnel (remote device management), and the device's answer
+(the elements after the write) is printed; --connected and the tool key work
+as for property read. This changes the device's configuration.
+
 Usage:
   knxctl property write host[:port] <object> <pid> <hex data> [flags]
 
 Examples:
   knxctl property write 192.168.1.10 device 54 01 --user-id 1   # programming mode on (PID_PROG_MODE)
   knxctl property write 192.168.1.10 knxnetip 76 6B6E7863746C --count 6
+  knxctl property write 192.168.1.10 knxnetip 76 6B6E78 --count 3 --device 1.1.0 --connected
 
 Flags:
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
+      --connected                 With --device: access the device in a transport connection (default connectionless)
       --count uint8               Number of elements (1..15) (default 1)
+      --device string             Individual address of a device on the KNX network: remote device management (A_PropertyValue_*) through a tunnel instead of the server's local device management
       --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
   -h, --help                      help for write
       --instance uint8            Object instance (default 1)
@@ -944,6 +963,7 @@ Flags:
       --nat                       Announce the route back endpoint (through NAT)
       --start uint16              First element (default 1)
       --tcp                       Connect over TCP
+      --tool-key string           With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any) (env KNXCTL_TOOL_KEY)
       --udp                       Run a KNX IP Secure session over UDP instead of TCP
       --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
       --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
@@ -1017,7 +1037,10 @@ routing) with a virtual KNX network behind it: telegrams of one tunnelling
 client reach the other clients and the virtual group objects, which store
 written values and answer reads according to their flags. Every telegram is
 printed. This is a simulator for development and tests; it does not emulate a
-physical KNX line or device management.
+physical KNX line. The server's own device (--address) answers local device
+management and remote device management (property read, write and description)
+through a tunnel; with --tool-key only secured with that tool key (KNX Data
+Secure tool access).
 
 Group objects come from --object group[+group]:dpt[:flags][=value] on a
 device at --device-address, or from a JSON file (--config, docs/serve.md).
@@ -1051,6 +1074,7 @@ Flags:
       --routing                   Route telegrams over IP multicast too
       --secure-user stringArray   KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)
       --serial string             KNX serial number, 12 hex digits (default 00FA00000001)
+      --tool-key string           Secure the remote device management of the server's device with this tool key, 32 hex digits, or "keyring" for its tool key in --keyring (env KNXCTL_TOOL_KEY)
       --tunnels strings           Tunnelling addresses, one per connection (default 15.15.250)
 
 Global Flags:
