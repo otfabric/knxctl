@@ -348,6 +348,7 @@ func newRoutingCmd(a *app) *cobra.Command {
 		},
 	}
 	mon.Flags().StringVar(&lf.group, "multicast", "224.0.23.12:3671", "Routing multicast group")
+	lf.secure.addRouting(mon.Flags())
 	ls.add(mon)
 	cmd.AddCommand(mon)
 	return cmd

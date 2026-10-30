@@ -28,6 +28,7 @@ type linkFlags struct {
 	tcp      bool
 	source   string
 	tunnelIA string
+	priority string
 	secure   secureFlags
 }
 
@@ -40,12 +41,20 @@ func (l *linkFlags) add(cmd *cobra.Command) {
 	f.BoolVar(&l.tcp, "tcp", false, "Tunnel over TCP (KNXnet/IP core v2) instead of UDP")
 	f.StringVar(&l.source, "source", "", "Source individual address of sent telegrams (routing; a tunnel uses the server's)")
 	f.StringVar(&l.tunnelIA, "tunnel-address", "", "Request this tunnelling address (extended CRI, tunnelling v2 servers)")
+	f.StringVar(&l.priority, "priority", "low", "Priority of sent telegrams: low, normal, urgent or system")
 	l.secure.add(f)
 }
 
 func (l *linkFlags) open(ctx context.Context, a *app) (*client.Client, error) {
 	var copts []client.Option
 	copts = append(copts, client.WithLogger(a.logger))
+	if l.priority != "" {
+		p, err := knx.ParsePriority(l.priority)
+		if err != nil {
+			return nil, errs.Invalid("--priority: %v", err)
+		}
+		copts = append(copts, client.WithPriority(p))
+	}
 	if l.source != "" {
 		ia, err := knx.ParseIndividualAddress(l.source)
 		if err != nil {

@@ -41,6 +41,13 @@ func (s *secureFlags) add(f *pflag.FlagSet) {
 	f.BoolVar(&s.udp, "udp", false, "Run a KNX IP Secure session over UDP instead of TCP")
 }
 
+// addRouting registers the flags of secure routing and Data Secure only.
+func (s *secureFlags) addRouting(f *pflag.FlagSet) {
+	f.StringVar(&s.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "ETS keyring (.knxkeys) with the backbone key and the Data Secure group keys (env KNXCTL_KEYRING)")
+	f.StringVar(&s.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
+	f.StringVar(&s.backboneKey, "backbone-key", envOr("KNXCTL_BACKBONE_KEY", ""), "KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)")
+}
+
 // keyring loads the keyring once; nil without --keyring.
 func (s *secureFlags) keyring() (*keyring.Keyring, error) {
 	if s.keyringPath == "" || s.kr != nil {

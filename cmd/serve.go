@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -92,7 +93,8 @@ func newServeCmd(a *app) *cobra.Command {
 	var tunnels, objects, secureUsers []string
 	var routing, noDiscovery, noTCP, concurrentBusmon bool
 	var sec secureFlags
-	var keyringHost string
+	var keyringHost, serial, multicast string
+	var progMode bool
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run a simulated KNXnet/IP server with virtual group objects",
@@ -135,7 +137,16 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 				cfg.Devices = append(cfg.Devices, dc)
 			}
 			opts := []server.Option{server.WithListenAddr(listenAddr), server.WithLogger(a.logger), server.WithRouting(routing), server.WithDiscovery(!noDiscovery),
-				server.WithTCP(!noTCP), server.WithConcurrentBusmonitor(concurrentBusmon)}
+				server.WithTCP(!noTCP), server.WithConcurrentBusmonitor(concurrentBusmon), server.WithProgrammingMode(progMode), server.WithMulticastGroup(multicast)}
+			if serial != "" {
+				b, err := hex.DecodeString(strings.ReplaceAll(serial, ":", ""))
+				if err != nil || len(b) != 6 {
+					return errs.Invalid("--serial: 12 hex digits (00FA12345678)")
+				}
+				var sn [6]byte
+				copy(sn[:], b)
+				opts = append(opts, server.WithSerial(sn))
+			}
 			if cfg.Name != "" {
 				opts = append(opts, server.WithName(cfg.Name))
 			}
@@ -260,6 +271,9 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 	f.StringVar(&sec.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)")
 	f.StringVar(&sec.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
 	f.StringVar(&sec.backboneKey, "backbone-key", envOr("KNXCTL_BACKBONE_KEY", ""), "KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY)")
+	f.BoolVar(&progMode, "programming-mode", false, "Announce programming mode in DEVICE_INFO (search and description)")
+	f.StringVar(&serial, "serial", "", "KNX serial number, 12 hex digits (default 00FA00000001)")
+	f.StringVar(&multicast, "multicast", "224.0.23.12:3671", "Multicast group of routing")
 	f.StringVar(&keyringHost, "keyring-host", "", "Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)")
 	return cmd
 }
