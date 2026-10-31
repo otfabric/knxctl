@@ -6,6 +6,17 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.7.1
+
+**Date:** 2026-10-31
+**Previous release:** v0.7.0
+
+### Fixed
+
+- go-knx v0.5.1: `knxctl` commands that start a local server (and the tests) no longer fail on Windows with "no port free for UDP and TCP" (see its release notes).
+
+---
+
 ## v0.7.0
 
 **Date:** 2026-10-30
