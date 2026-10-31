@@ -78,6 +78,67 @@ func decodeCEMI(b []byte) (*decodedCEMI, error) {
 	return d, nil
 }
 
+// decodeFrame decodes a KNXnet/IP frame and the cEMI frame it carries. The
+// octets are whatever the user pasted or a capture held: nothing about them
+// is trusted.
+func decodeFrame(b []byte) (decodedFrame, error) {
+	m, err := knxnetip.Parse(b)
+	if err != nil {
+		return decodedFrame{}, err
+	}
+	d := decodedFrame{Layer: "KNXnet/IP", Service: m.Service().String(), Length: len(b), Fields: map[string]any{}}
+	var payload []byte
+	switch m := m.(type) {
+	case *knxnetip.TunnellingRequest:
+		d.Fields["channel"], d.Fields["sequence"] = m.Channel, m.Seq
+		payload = m.CEMI
+	case *knxnetip.TunnellingAck:
+		d.Fields["channel"], d.Fields["sequence"], d.Fields["status"] = m.Channel, m.Seq, m.Status.String()
+	case *knxnetip.RoutingIndication:
+		payload = m.CEMI
+	case *knxnetip.DeviceConfigurationRequest:
+		d.Fields["channel"], d.Fields["sequence"] = m.Channel, m.Seq
+		payload = m.CEMI
+	case *knxnetip.ConnectRequest:
+		d.Fields["control"], d.Fields["data"], d.Fields["connectionType"], d.Fields["layer"] = m.Control.String(), m.Data.String(), m.CRI.Type.String(), m.CRI.Layer.String()
+	case *knxnetip.ConnectResponse:
+		d.Fields["channel"], d.Fields["status"] = m.Channel, m.Status.String()
+		if m.Status == knxnetip.StatusNoError {
+			d.Fields["data"], d.Fields["address"] = m.Data.String(), m.CRD.Address.String()
+		}
+	case *knxnetip.ConnectionStateRequest:
+		d.Fields["channel"], d.Fields["control"] = m.Channel, m.Control.String()
+	case *knxnetip.ConnectionStateResponse:
+		d.Fields["channel"], d.Fields["status"] = m.Channel, m.Status.String()
+	case *knxnetip.DisconnectRequest:
+		d.Fields["channel"], d.Fields["control"] = m.Channel, m.Control.String()
+	case *knxnetip.DisconnectResponse:
+		d.Fields["channel"], d.Fields["status"] = m.Channel, m.Status.String()
+	case *knxnetip.SearchRequest:
+		d.Fields["discovery"] = m.Discovery.String()
+	case *knxnetip.DescriptionRequest:
+		d.Fields["control"] = m.Control.String()
+	case *knxnetip.SearchResponse:
+		d.Fields["control"] = m.Control.String()
+		d.Fields["device"] = newDeviceRecord(m.Control.Addr.String(), m.DIBs)
+	case *knxnetip.DescriptionResponse:
+		d.Fields["device"] = newDeviceRecord("", m.DIBs)
+	case *knxnetip.Unknown:
+		d.Fields["body"] = strings.ToUpper(hex.EncodeToString(m.Body))
+	}
+	if payload != nil {
+		c, err := decodeCEMI(payload)
+		if err != nil {
+			d.Fields["cemiError"] = err.Error()
+		}
+		d.CEMI = c
+	}
+	if len(d.Fields) == 0 {
+		d.Fields = nil
+	}
+	return d, nil
+}
+
 func newDecodeCmd(a *app) *cobra.Command {
 	var asCEMI bool
 	cmd := &cobra.Command{
@@ -98,59 +159,9 @@ func newDecodeCmd(a *app) *cobra.Command {
 				}
 				return a.emit("decode", decodedFrame{Layer: "cEMI", Service: c.Code, Length: len(b), CEMI: c})
 			}
-			m, err := knxnetip.Parse(b)
+			d, err := decodeFrame(b)
 			if err != nil {
 				return err
-			}
-			d := decodedFrame{Layer: "KNXnet/IP", Service: m.Service().String(), Length: len(b), Fields: map[string]any{}}
-			var payload []byte
-			switch m := m.(type) {
-			case *knxnetip.TunnellingRequest:
-				d.Fields["channel"], d.Fields["sequence"] = m.Channel, m.Seq
-				payload = m.CEMI
-			case *knxnetip.TunnellingAck:
-				d.Fields["channel"], d.Fields["sequence"], d.Fields["status"] = m.Channel, m.Seq, m.Status.String()
-			case *knxnetip.RoutingIndication:
-				payload = m.CEMI
-			case *knxnetip.DeviceConfigurationRequest:
-				d.Fields["channel"], d.Fields["sequence"] = m.Channel, m.Seq
-				payload = m.CEMI
-			case *knxnetip.ConnectRequest:
-				d.Fields["control"], d.Fields["data"], d.Fields["connectionType"], d.Fields["layer"] = m.Control.String(), m.Data.String(), m.CRI.Type.String(), m.CRI.Layer.String()
-			case *knxnetip.ConnectResponse:
-				d.Fields["channel"], d.Fields["status"] = m.Channel, m.Status.String()
-				if m.Status == knxnetip.StatusNoError {
-					d.Fields["data"], d.Fields["address"] = m.Data.String(), m.CRD.Address.String()
-				}
-			case *knxnetip.ConnectionStateRequest:
-				d.Fields["channel"], d.Fields["control"] = m.Channel, m.Control.String()
-			case *knxnetip.ConnectionStateResponse:
-				d.Fields["channel"], d.Fields["status"] = m.Channel, m.Status.String()
-			case *knxnetip.DisconnectRequest:
-				d.Fields["channel"], d.Fields["control"] = m.Channel, m.Control.String()
-			case *knxnetip.DisconnectResponse:
-				d.Fields["channel"], d.Fields["status"] = m.Channel, m.Status.String()
-			case *knxnetip.SearchRequest:
-				d.Fields["discovery"] = m.Discovery.String()
-			case *knxnetip.DescriptionRequest:
-				d.Fields["control"] = m.Control.String()
-			case *knxnetip.SearchResponse:
-				d.Fields["control"] = m.Control.String()
-				d.Fields["device"] = newDeviceRecord(m.Control.Addr.String(), m.DIBs)
-			case *knxnetip.DescriptionResponse:
-				d.Fields["device"] = newDeviceRecord("", m.DIBs)
-			case *knxnetip.Unknown:
-				d.Fields["body"] = strings.ToUpper(hex.EncodeToString(m.Body))
-			}
-			if payload != nil {
-				c, err := decodeCEMI(payload)
-				if err != nil {
-					d.Fields["cemiError"] = err.Error()
-				}
-				d.CEMI = c
-			}
-			if len(d.Fields) == 0 {
-				d.Fields = nil
 			}
 			return a.emit("decode", d)
 		},

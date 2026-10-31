@@ -3,7 +3,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all build build-all test test-multicast coverage cover cross lint lint-ci fmt fmt-check vet vuln docs check install clean e2e
+.PHONY: help all build build-all test test-multicast coverage cover cross lint lint-ci fmt fmt-check vet vuln docs check install clean e2e coverage-pkg-check fuzz
 
 help: ## This help
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -19,6 +19,9 @@ COMMIT      ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 BUILD_DATE  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS     := -ldflags "-s -w -X 'main.version=$(VERSION)' -X 'main.tag=$(TAG)' -X 'main.commit=$(COMMIT)' -X 'main.buildDate=$(BUILD_DATE)'"
 COVERAGE_MIN := 85
+# Per-package floor (TEST-012), from the coverage.out of `make coverage`.
+COVER_PKG_MIN := 85
+FUZZTIME ?= 10s
 
 GO_MOD_VERSION := $(shell sed -nE 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod | head -n1)
 GOFMT_CI = $(shell GOTOOLCHAIN=go$(GO_MOD_VERSION).0 go env GOROOT)/bin/gofmt
@@ -48,6 +51,19 @@ coverage: ## Whole-module coverage (coverage.out); fails below COVERAGE_MIN
 	@go test -count=1 -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
 	@total=$$(go tool cover -func=coverage.out | tail -1 | awk '{print $$3}' | tr -d %); \
 	echo "total $$total% (minimum $(COVERAGE_MIN)%)"; awk -v t=$$total -v m=$(COVERAGE_MIN) 'BEGIN { exit (t+0 < m+0) }'
+
+coverage-pkg-check: coverage ## Fail when a package is below COVER_PKG_MIN
+	@awk -v m="$(COVER_PKG_MIN)" 'NR > 1 { n[$$1] = $$2; if ($$3 > 0) h[$$1] = 1 } \
+	END { for (k in n) { p = k; sub(/\/[^\/]*$$/, "", p); s[p] += n[k]; if (k in h) c[p] += n[k] } \
+	for (p in s) { v = 100 * c[p] / s[p]; if (v < m) { printf "%s: %.1f%% < %s%%\n", p, v, m; bad = 1 } } exit bad }' coverage.out
+
+fuzz: ## Run every fuzz target for FUZZTIME (targets discovered, never listed)
+	@for pkg in $$(go list ./...); do \
+		for t in $$(go test -list '^Fuzz' $$pkg | grep '^Fuzz'); do \
+			echo "fuzz $$pkg $$t"; \
+			go test -run '^$$' -fuzz "^$$t$$" -fuzztime $(FUZZTIME) $$pkg || exit 1; \
+		done; \
+	done
 
 cover: coverage ## Open the coverage report
 	@go tool cover -html=coverage.out
@@ -79,7 +95,7 @@ vuln: ## govulncheck
 docs: ## Regenerate docs/cli.md from the --help of every command
 	@scripts/gen-cli-doc.sh
 
-check: fmt-check lint lint-ci vet cross vuln test coverage ## Everything CI checks
+check: fmt-check lint lint-ci vet cross vuln test coverage coverage-pkg-check ## Everything CI checks
 
 e2e: ## Build the binary and run the e2e suite against it
 	@mkdir -p bin

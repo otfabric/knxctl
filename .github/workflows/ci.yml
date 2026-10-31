@@ -19,6 +19,7 @@ jobs:
     uses: otfabric/.github/.github/workflows/go-ci.yml@v3.2.0
     with:
       run-govulncheck: true
+      fuzz-time: 10s
       coverage-min: "85"
       codecov-name: knxctl
       run-codecov: false
@@ -47,10 +48,10 @@ jobs:
           go-version-file: go.mod
       - name: Tests with the race detector
         run: make test-multicast
-      - name: Coverage (minimum 85 %)
+      - name: Coverage (minimum 85 %, per package too)
         env:
           KNX_REQUIRE_MULTICAST: "1"
-        run: make coverage
+        run: make coverage-pkg-check
       - name: Upload to Codecov
         if: matrix.arch == 'amd64'
         uses: codecov/codecov-action@v7
