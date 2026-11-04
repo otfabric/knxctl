@@ -247,7 +247,9 @@ Global Flags:
 ## knxctl tunnel feature set
 
 ```text
-Write an interface feature of a tunnelling v2 server (info-service)
+Write an interface feature of a tunnelling v2 server (info-service) through a
+tunnelling connection (TCP by default); the value is 1..1012 octets, hexadecimal.
+Nothing is sent onto the KNX network.
 
 Usage:
   knxctl tunnel feature set host[:port] <feature> <hex value> [flags]
@@ -330,7 +332,7 @@ Flags:
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
       --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --raw string                Send these octets (hexadecimal) instead of a value
+      --raw string                Send these octets (hexadecimal, 1..254) instead of a value
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                     With --raw: send one octet 00..3F in the APCI (6-bit value)
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
@@ -374,7 +376,7 @@ Flags:
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
       --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --raw string                Send these octets (hexadecimal) instead of a value
+      --raw string                Send these octets (hexadecimal, 1..254) instead of a value
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                     With --raw: send one octet 00..3F in the APCI (6-bit value)
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
@@ -399,7 +401,8 @@ Global Flags:
 Send A_GroupValue_Read and print the first A_GroupValue_Response within
 --timeout. A response is not guaranteed: the read times out (exit 5) when no
 device answers. Several devices may answer the same address; --all collects
-every response during the given window.
+every response during the given window, at most 1000 (more are dropped with a
+warning).
 
 Usage:
   knxctl group read <group> [flags]
@@ -409,7 +412,7 @@ Examples:
   knxctl group read 1/2/4 --all 2s --gateway 192.168.1.10 --format json
 
 Flags:
-      --all duration              Collect every response during this window
+      --all duration              Collect every response during this window (at most 1000)
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
       --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
   -t, --dpt string                Datapoint type to decode the value with (9.001)
@@ -453,10 +456,10 @@ Examples:
 
 Flags:
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many answers
+  -n, --count int                 Stop after this many answers (0: no limit)
       --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
   -t, --dpt string                Datapoint type of the value
-      --duration duration         Stop after this time
+      --duration duration         Stop after this time (0: no limit)
   -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
   -h, --help                      help for answer
       --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
@@ -464,7 +467,7 @@ Flags:
       --multicast string          Routing multicast group (default "224.0.23.12:3671")
       --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
       --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --raw string                Answer with these octets (hexadecimal)
+      --raw string                Answer with these octets (hexadecimal, 1..254)
       --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
       --small                     With --raw: one octet 00..3F in the APCI
       --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
@@ -497,10 +500,10 @@ Examples:
 
 Flags:
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many telegrams
+  -n, --count int                 Stop after this many telegrams (0: no limit)
       --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
   -t, --dpt string                Decode every group with this datapoint type
-      --duration duration         Stop after this time
+      --duration duration         Stop after this time (0: no limit)
   -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
   -h, --help                      help for listen
       --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
@@ -541,10 +544,10 @@ Examples:
 
 Flags:
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many telegrams
+  -n, --count int                 Stop after this many telegrams (0: no limit)
       --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
   -t, --dpt string                Decode every group with this datapoint type
-      --duration duration         Stop after this time
+      --duration duration         Stop after this time (0: no limit)
   -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
   -h, --help                      help for monitor
       --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
@@ -608,9 +611,9 @@ Examples:
 
 Flags:
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many telegrams
+  -n, --count int                 Stop after this many telegrams (0: no limit)
   -t, --dpt string                Decode every group with this datapoint type
-      --duration duration         Stop after this time
+      --duration duration         Stop after this time (0: no limit)
   -h, --help                      help for monitor
       --keyring string            ETS keyring (.knxkeys) with the backbone key and the Data Secure group keys (env KNXCTL_KEYRING)
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
@@ -704,7 +707,7 @@ Examples:
 
 Flags:
   -h, --help       help for list
-      --main int   Only the subtypes of this main number
+      --main int   Only the subtypes of this main number (0: all)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -831,9 +834,9 @@ Examples:
 
 Flags:
       --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many frames
+  -n, --count int                 Stop after this many frames (0: no limit)
       --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-      --duration duration         Stop after this time
+      --duration duration         Stop after this time (0: no limit)
   -h, --help                      help for busmonitor
       --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
       --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
@@ -933,7 +936,8 @@ Global Flags:
 
 ```text
 Open a device management connection and write count elements of a property
-from element start; the data holds the count elements, hexadecimal. The server
+from element start; the data holds the count elements, hexadecimal (at most
+1007 octets, with --device 248). The server
 answers with the written elements, or with none when it refuses (read only,
 wrong type or length). This changes the server's configuration.
 

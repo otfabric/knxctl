@@ -231,13 +231,21 @@ func jsonValue(v any) any {
 	return v
 }
 
+// maxGroupValue is the longest group value an APDU carries (extended
+// frames; apdu.GroupValueWrite).
+const maxGroupValue = 254
+
 // parseValue parses a value for a write: with a datapoint type its text
 // form, without one a boolean for DPT 1.
 func parseValue(ty *dpt.Type, raw string, small bool, value string) (apdu.GroupValue, error) {
 	if raw != "" {
-		b, err := hex.DecodeString(strings.ReplaceAll(strings.TrimPrefix(raw, "0x"), " ", ""))
+		b, err := decodeHex(raw)
 		if err != nil || len(b) == 0 {
 			return apdu.GroupValue{}, errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "--raw %q: want hexadecimal octets", raw)
+		}
+		if len(b) > maxGroupValue {
+			// go-knx refuses it only when sending, after connecting.
+			return apdu.GroupValue{}, errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "--raw: %d octets, a group value has at most %d", len(b), maxGroupValue)
 		}
 		if small && (len(b) != 1 || b[0] > 0x3F) {
 			return apdu.GroupValue{}, errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "--small takes one octet 00..3F")

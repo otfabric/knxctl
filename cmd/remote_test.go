@@ -92,3 +92,39 @@ func TestServeToolKey(t *testing.T) {
 		}
 	}
 }
+
+// A device with more than 256 interface objects: an object past index 255
+// cannot be addressed and must not be found at a wrapped index.
+func TestFindObjectBounds(t *testing.T) {
+	list := make([]uint16, 300)
+	for i := range list {
+		list[i] = 0x1000 + uint16(i)
+	}
+	reads := 0
+	read := func(start uint16, count uint8) ([]byte, error) {
+		reads++
+		var b []byte
+		// A hostile device answers one entry more than asked.
+		for i := int(start) - 1; i < int(start)-1+int(count)+1 && i < len(list); i++ {
+			b = append(b, byte(list[i]>>8), byte(list[i]))
+		}
+		return b, nil
+	}
+	if idx, ok, err := findObject(len(list), 0x1000+255, read); err != nil || !ok || idx != 255 {
+		t.Fatalf("index 255: %d %v %v", idx, ok, err)
+	}
+	// Index 256 would wrap to 0.
+	if idx, ok, err := findObject(len(list), 0x1000+256, read); err != nil || ok {
+		t.Fatalf("index 256 found at %d (%v)", idx, err)
+	}
+	// The extra entry of each answer is ignored: 0x1000+15 is only found
+	// at its own index, from the second read.
+	if idx, ok, _ := findObject(len(list), 0x1000+15, read); !ok || idx != 15 {
+		t.Fatalf("index 15: %d %v", idx, ok)
+	}
+	reads = 0
+	_, _, _ = findObject(65535, 0xFFFF, read)
+	if reads > 18 {
+		t.Fatalf("%d reads for a 65535-entry list", reads)
+	}
+}

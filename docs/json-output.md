@@ -29,7 +29,7 @@ Commands with one result write one indented document, the envelope:
 | `describe` | `device`: a device |
 | `tunnel connect` | `server`, `channel`, `individualAddress` (the tunnelling address), `local` (local endpoint), `connectMs`; with `--hold` also `held` (duration) and `heartbeatsOk` (the connection was alive at the end) |
 | `group write`, `group respond` | `group`, `service` (`write` or `response`), `data` (hex), `small` (6-bit value in the APCI), `dpt` (with `--dpt`), `via` (`tunnel <gateway>` or `routing <group>`) |
-| `group read` | `group`, `responses`: array of telegram records (below), one without `--all`, every response in the window with it |
+| `group read` | `group`, `responses`: array of telegram records (below), one without `--all`, every response in the window with it (at most 1000; a warning on stderr counts the dropped ones) |
 | `group answer` | `group`, `answered` (number of reads answered) |
 | `diagnose` | `server`, `ok`, `checks`: array of `name`, `ok`, `detail`, `ms` (checks: directed search, description, tunnelling service, tunnel connect, heartbeat, disconnect) |
 | `dpt list` | `types`: array of datapoint types (below) |
@@ -93,6 +93,14 @@ A fatal error is one document on stdout, and the exit code tells its kind
   "schemaVersion": "1.0",
   "error": {"kind": "timeout", "code": "timeout", "message": "knx: timeout: client: no response to the read of 1/2/4"}
 }
+```
+
+A stream (`monitor`, `group listen`, `routing monitor`, `busmonitor`,
+`serve`) that fails writes its error document as one more line, compact,
+so that the output stays valid JSON Lines:
+
+```json
+{"schemaVersion":"1.0","error":{"kind":"transport","code":"connection_lost","message":"..."}}
 ```
 
 Do not parse `message`; use `kind` and `code`. `diagnose` with failing

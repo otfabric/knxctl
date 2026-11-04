@@ -83,6 +83,17 @@ func WriteError(w io.Writer, e any) error {
 	return writeJSON(w, ErrorEnvelope{SchemaVersion, e})
 }
 
+// WriteErrorLine renders a fatal error document on one line: the end of
+// a JSON Lines stream, which an indented document would break.
+func WriteErrorLine(w io.Writer, e any) error {
+	b, err := json.Marshal(ErrorEnvelope{SchemaVersion, e})
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(append(b, '\n'))
+	return err
+}
+
 func writeJSON(w io.Writer, v any) error {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)

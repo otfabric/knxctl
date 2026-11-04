@@ -92,6 +92,12 @@ another is connected.`,
 		Example: "  knxctl busmonitor 192.168.1.10\n  knxctl busmonitor 192.168.1.10 --count 20 --format json",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkCount("count", count); err != nil {
+				return err
+			}
+			if err := checkDuration("duration", duration); err != nil {
+				return err
+			}
 			ctx := cmd.Context()
 			if duration > 0 {
 				var cancel context.CancelFunc
@@ -141,7 +147,7 @@ another is connected.`,
 	cmd.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (through NAT)")
 	cmd.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP")
 	sec.add(cmd.Flags())
-	cmd.Flags().IntVarP(&count, "count", "n", 0, "Stop after this many frames")
-	cmd.Flags().DurationVar(&duration, "duration", 0, "Stop after this time")
+	cmd.Flags().IntVarP(&count, "count", "n", 0, "Stop after this many frames (0: no limit)")
+	cmd.Flags().DurationVar(&duration, "duration", 0, "Stop after this time (0: no limit)")
 	return cmd
 }

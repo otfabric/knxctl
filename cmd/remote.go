@@ -99,21 +99,45 @@ func (r *remote) objectIndex(ctx context.Context, objType uint16) (uint8, error)
 	if err != nil {
 		return 0, err
 	}
-	for start := 1; start <= n; start += 15 {
-		b, err := r.d.PropertyRead(ctx, 0, 71, uint16(start), uint8(min(15, n-start+1)))
-		if err != nil {
-			return 0, err
-		}
-		for i := 0; i+1 < len(b); i += 2 {
-			if uint16(b[i])<<8|uint16(b[i+1]) == objType {
-				return uint8(start - 1 + i/2), nil
-			}
-		}
+	idx, ok, err := findObject(n, objType, func(start uint16, count uint8) ([]byte, error) {
+		return r.d.PropertyRead(ctx, 0, 71, start, count)
+	})
+	if err != nil || ok {
+		return idx, err
 	}
 	return 0, errs.New(errs.KindRejected, errs.CodeRejected, "%s has no interface object of type 0x%04X", r.addr, objType)
 }
 
 // remoteContext bounds a remote access by the global timeout.
 func remoteContext(ctx context.Context, a *app) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, a.timeout+5*time.Second)
+	return context.WithTimeout(ctx, addDuration(a.timeout, 5*time.Second))
+}
+
+// findObject returns the index of objType in an interface object list of
+// n entries, read 15 entries at a time with read. Objects are addressed
+// by a one-octet index, so entries past the 256th are not read, and a
+// device that answers more entries than asked does not shift the index.
+func findObject(n int, objType uint16, read func(start uint16, count uint8) ([]byte, error)) (uint8, bool, error) {
+	n = min(n, 256)
+	for start := 1; start <= n; start += 15 {
+		count := min(15, n-start+1)
+		b, err := read(uint16(max(min(start, 0xFFFF), 0)), uint8(max(min(count, 15), 0)))
+		if err != nil {
+			return 0, false, err
+		}
+		for i := 0; i+1 < len(b) && i/2 < count; i += 2 {
+			if uint16(b[i])<<8|uint16(b[i+1]) != objType {
+				continue
+			}
+			idx := start - 1 + i/2
+			if idx < 0 {
+				break
+			}
+			if idx > 0xFF {
+				break
+			}
+			return uint8(idx), true, nil
+		}
+	}
+	return 0, false, nil
 }
