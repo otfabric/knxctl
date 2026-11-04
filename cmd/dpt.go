@@ -32,7 +32,7 @@ func newDPTRecord(t *dpt.Type) dptRecord {
 		mn, mx := t.Min, t.Max
 		r.Min, r.Max = &mn, &mx
 	}
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if n, ok := t.Enum[uint8(i)]; ok {
 			r.Enum = append(r.Enum, fmt.Sprintf("%d=%s", i, n))
 		}
