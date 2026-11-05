@@ -401,8 +401,8 @@ Global Flags:
 Send A_GroupValue_Read and print the first A_GroupValue_Response within
 --timeout. A response is not guaranteed: the read times out (exit 5) when no
 device answers. Several devices may answer the same address; --all collects
-every response during the given window, at most 1000 (more are dropped with a
-warning).
+every response during the given window, at most 1000 (the read ends at the
+1000th, with a warning).
 
 Usage:
   knxctl group read <group> [flags]

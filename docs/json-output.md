@@ -29,7 +29,7 @@ Commands with one result write one indented document, the envelope:
 | `describe` | `device`: a device |
 | `tunnel connect` | `server`, `channel`, `individualAddress` (the tunnelling address), `local` (local endpoint), `connectMs`; with `--hold` also `held` (duration) and `heartbeatsOk` (the connection was alive at the end) |
 | `group write`, `group respond` | `group`, `service` (`write` or `response`), `data` (hex), `small` (6-bit value in the APCI), `dpt` (with `--dpt`), `via` (`tunnel <gateway>` or `routing <group>`) |
-| `group read` | `group`, `responses`: array of telegram records (below), one without `--all`, every response in the window with it (at most 1000; a warning on stderr counts the dropped ones) |
+| `group read` | `group`, `responses`: array of telegram records (below), one without `--all`, every response in the window with it (at most 1000: the read ends at the 1000th response, with a warning on stderr) |
 | `group answer` | `group`, `answered` (number of reads answered) |
 | `diagnose` | `server`, `ok`, `checks`: array of `name`, `ok`, `detail`, `ms` (checks: directed search, description, tunnelling service, tunnel connect, heartbeat, disconnect) |
 | `dpt list` | `types`: array of datapoint types (below) |

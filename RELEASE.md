@@ -13,7 +13,7 @@ version as its notes. Add the section before running it.
 
 ## Summary
 
-Built on go-knx v0.6.0 and Go 1.26. Static analysis (gosec, opengrep) at low/low is clean, with every finding fixed in code. A hardening pass fixed 15 defects where flags were not checked, a peer could hang or flood a command, or the exit code or JSON output was wrong. New chaos, signal and fuzz tests cover them.
+Built on go-knx v0.7.0 and Go 1.26. Static analysis (gosec, opengrep) at low/low is clean, with every finding fixed in code. A hardening pass fixed 15 defects where flags were not checked, a peer could hang or flood a command, or the exit code or JSON output was wrong. New chaos, signal and fuzz tests cover them.
 
 **Upgrade notes:** Go 1.26 to build. Several invalid inputs that were accepted now exit 3 (see Changed).
 
@@ -23,7 +23,7 @@ Built on go-knx v0.6.0 and Go 1.26. Static analysis (gosec, opengrep) at low/low
 
 - `property --device`: a device listing more than 256 interface objects made an object at index 256 or later come back at a wrapped index (256 as 0), so the command addressed another object. Objects past index 255 are no longer found.
 - Local `property read`/`write`: a server that acknowledged the request and never confirmed it hung the command forever. `tunnel feature get`/`set` waited 3 s whatever `--timeout` said. Both now end at `--timeout` (exit 5).
-- `group read --all` kept every response, so a flood (routing multicast is open to the LAN) grew memory without limit. It keeps at most 1000 and reports the rest on stderr.
+- `group read --all` kept every response, so a flood (routing multicast is open to the LAN) grew memory without limit. The read now ends at the 1000th response, with a warning on stderr (go-knx v0.7.0 `WithMaxResponses`).
 - A very large `--timeout` wrapped to a negative deadline, and commands exited 5 at once. Deadlines now saturate.
 - Ctrl-C during a remote property access exited 5 (timeout) instead of 130.
 - `--format json` streams (monitor, busmonitor, routing monitor) that failed after their records appended an indented error document. stdout is now valid JSON Lines: the error is one compact line.
@@ -36,7 +36,7 @@ Built on go-knx v0.6.0 and Go 1.26. Static analysis (gosec, opengrep) at low/low
 
 ### Changed
 
-- go-knx v0.6.0 (its fixes: server reconnect sequence counters, exact-endpoint channel frames, Windows UDP read errors, and more; see its notes), Go 1.26 (CI on 1.26 and 1.27), `go fix` applied, shared workflows v3.3.1, pflag v1.0.10.
+- go-knx v0.7.0, through v0.6.0. v0.6.0 fixed the server reconnect sequence counters, exact-endpoint channel frames and Windows UDP read errors. v0.7.0 bounds search and group read results and device management waits, keeps a cancelled access apart from a timeout, and refuses oversized frames without dropping the tunnel. See their notes. Go 1.26 (CI on 1.26 and 1.27), `go fix` applied, shared workflows v3.3.1, pflag v1.0.10.
 - Interrupted commands whose cause go-knx reported as a timeout exit 130 with code `canceled`, and the message starts with "interrupted: ".
 - Tests: `cmd/chaos_test.go` (noise, flood and silent peers against every network command), `e2e/signal_test.go` (SIGINT to the binary), and fuzz targets for busmonitor records, the object list, raw values, search filters and redaction.
 

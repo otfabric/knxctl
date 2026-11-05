@@ -4,14 +4,11 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
 	"github.com/otfabric/go-knx"
-	"github.com/otfabric/go-knx/apdu"
 	"github.com/otfabric/go-knx/client"
 	"github.com/otfabric/go-knx/dpt"
 	"github.com/otfabric/knxctl/internal/errs"
@@ -148,8 +145,8 @@ func newGroupReadCmd(a *app) *cobra.Command {
 		Long: `Send A_GroupValue_Read and print the first A_GroupValue_Response within
 --timeout. A response is not guaranteed: the read times out (exit 5) when no
 device answers. Several devices may answer the same address; --all collects
-every response during the given window, at most 1000 (more are dropped with a
-warning).`,
+every response during the given window, at most 1000 (the read ends at the
+1000th, with a warning).`,
 		Example: `  knxctl group read 1/2/4 --dpt 9.001 --gateway 192.168.1.10
   knxctl group read 1/2/4 --all 2s --gateway 192.168.1.10 --format json`,
 		Args: cobra.ExactArgs(1),
@@ -176,12 +173,12 @@ warning).`,
 			defer func() { _ = c.Close() }()
 			res := readResult{Group: g.String(), Responses: []telegramRecord{}}
 			if all > 0 {
-				rs, dropped, err := readAll(ctx, c, g, all, maxReadResponses)
+				rs, full, err := readAll(ctx, c, g, all, maxReadResponses)
 				if err != nil {
 					return err
 				}
-				if dropped > 0 {
-					a.warn("%d responses past the first %d dropped", dropped, maxReadResponses)
+				if full {
+					a.warn("stopped at the first %d responses", maxReadResponses)
 				}
 				for _, t := range rs {
 					res.Responses = append(res.Responses, newTelegramRecord(t, ty))
@@ -215,62 +212,20 @@ warning).`,
 const maxReadResponses = 1000
 
 // readAll sends A_GroupValue_Read to g and collects the responses during
-// window, at most limit of them; it returns how many more were dropped.
-// It replaces client.GroupReadAll, which keeps every response.
-func readAll(ctx context.Context, c *client.Client, g knx.GroupAddress, window time.Duration, limit int) ([]client.Telegram, int, error) {
-	wctx, cancel := context.WithTimeout(ctx, window)
-	defer cancel()
-	sub := c.Subscribe(256, g)
-	defer sub.Unsubscribe()
-	// GroupRead sends the read and returns at the first response; every
-	// response, the first included, also reaches the subscription.
-	readErr := make(chan error, 1)
-	go func() {
-		_, err := c.GroupRead(wctx, g)
-		readErr <- err
-	}()
-	var out []client.Telegram
-	dropped := 0
-	collect := func(t client.Telegram) {
-		if t.Service != apdu.GroupValueResponseService {
-			return
-		}
-		if len(out) < limit {
-			out = append(out, t)
-		} else {
-			dropped++
-		}
+// window, at most limit of them (go-knx returns as soon as it has that
+// many). full reports that the limit ended the collection.
+func readAll(ctx context.Context, c *client.Client, g knx.GroupAddress, window time.Duration, limit int) (out []client.Telegram, full bool, err error) {
+	rs, err := c.GroupReadAll(ctx, g, window, client.WithMaxResponses(limit))
+	if err != nil {
+		return nil, false, err
 	}
-	for wctx.Err() == nil {
-		select {
-		case t, ok := <-sub.C():
-			if !ok {
-				cancel()
-				break
-			}
-			collect(t)
-		case <-wctx.Done():
-		}
+	if ctx.Err() != nil {
+		return nil, false, ctx.Err()
 	}
-	err := <-readErr
-	// Responses already queued belong to the window.
-	for len(sub.C()) > 0 {
-		t, ok := <-sub.C()
-		if !ok {
-			break
-		}
-		collect(t)
+	for _, r := range rs {
+		out = append(out, r.Telegram)
 	}
-	dropped += int(min(sub.Dropped(), uint64(math.MaxInt32)))
-	switch {
-	case ctx.Err() != nil:
-		return nil, 0, ctx.Err()
-	case c.Err() != nil:
-		return nil, 0, c.Err()
-	case err != nil && !errors.Is(err, knx.ErrTimeout) && !errors.Is(err, context.DeadlineExceeded):
-		return nil, 0, err
-	}
-	return out, dropped, nil
+	return out, len(out) >= limit, nil
 }
 
 // listen streams group telegrams until count, duration or interruption.

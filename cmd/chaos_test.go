@@ -199,6 +199,8 @@ type acceptor struct {
 	mu        sync.Mutex
 	flood     int
 	busmon    bool
+	confirm   bool // confirm the client's L_Data.req like a real gateway
+	seq       uint8
 	connected atomic.Int64
 }
 
@@ -220,12 +222,23 @@ func (a *acceptor) handle(p *hostilePeer, from netip.AddrPort, m knxnetip.Messag
 		n, busmon := a.flood, a.busmon
 		a.mu.Unlock()
 		if n > 0 {
-			go floodClient(p, data, n, busmon)
+			go a.floodClient(p, data, n, busmon)
 		}
 	case *knxnetip.ConnectionStateRequest:
 		p.send(from, &knxnetip.ConnectionStateResponse{Channel: m.Channel, Status: knxnetip.StatusNoError})
 	case *knxnetip.TunnellingRequest:
 		p.send(from, &knxnetip.TunnellingAck{Channel: m.Channel, Seq: m.Seq, Status: knxnetip.StatusNoError})
+		a.mu.Lock()
+		confirm := a.confirm
+		a.mu.Unlock()
+		if f, err := cemi.Parse(m.CEMI); confirm && err == nil {
+			if ld, ok := f.(*cemi.LData); ok && ld.MsgCode == cemi.LDataReq {
+				ld.MsgCode = cemi.LDataCon
+				if b, err := cemi.Marshal(ld); err == nil {
+					a.sendSeq(p, from, b)
+				}
+			}
+		}
 	case *knxnetip.DeviceConfigurationRequest:
 		p.send(from, &knxnetip.DeviceConfigurationAck{Channel: m.Channel, Seq: m.Seq, Status: knxnetip.StatusNoError})
 	case *knxnetip.TunnellingFeature:
@@ -238,7 +251,7 @@ func (a *acceptor) handle(p *hostilePeer, from netip.AddrPort, m knxnetip.Messag
 // floodClient sends n telegrams to the client: group responses to 1/2/4
 // from changing sources (L_Data.ind, or L_Busmon.ind), with garbage cEMI
 // frames between them.
-func floodClient(p *hostilePeer, to netip.AddrPort, n int, busmon bool) {
+func (a *acceptor) floodClient(p *hostilePeer, to netip.AddrPort, n int, busmon bool) {
 	time.Sleep(50 * time.Millisecond) // let the client finish connecting
 	g := knx.MustParseGroupAddress("1/2/4")
 	tpdu, _ := apdu.GroupValueResponse(apdu.GroupValue{Data: []byte{0x0C, 0x33}})
@@ -258,8 +271,17 @@ func floodClient(p *hostilePeer, to netip.AddrPort, n int, busmon bool) {
 		if i%10 == 9 {
 			b = []byte{0x29, 0x00, 0xbc} // truncated L_Data.ind
 		}
-		p.send(to, &knxnetip.TunnellingRequest{Channel: 7, Seq: uint8(i), CEMI: b})
+		a.sendSeq(p, to, b)
 	}
+}
+
+// sendSeq sends a TUNNELLING_REQUEST with the next server sequence
+// number; the lock keeps numbering and sending in order.
+func (a *acceptor) sendSeq(p *hostilePeer, to netip.AddrPort, b []byte) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	p.send(to, &knxnetip.TunnellingRequest{Channel: 7, Seq: a.seq, CEMI: b})
+	a.seq++
 }
 
 // A server that accepts the connection and then answers nothing: every
@@ -341,10 +363,10 @@ func TestChaosFloodAfterConnect(t *testing.T) {
 	}
 }
 
-// readAll keeps at most limit responses of a flood and counts the rest.
+// readAll ends at limit responses of a flood, long before its window.
 func TestReadAllBounded(t *testing.T) {
 	t.Parallel()
-	a := &acceptor{flood: 400}
+	a := &acceptor{flood: 400, confirm: true}
 	p := startHostile(t, a.handle)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -355,7 +377,8 @@ func TestReadAllBounded(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		rs, dropped, err := readAll(ctx, c, knx.MustParseGroupAddress("1/2/4"), 700*time.Millisecond, 3)
+		start := time.Now()
+		rs, full, err := readAll(ctx, c, knx.MustParseGroupAddress("1/2/4"), 5*time.Second, 3)
 		_ = c.Close()
 		if err != nil {
 			t.Fatal(err)
@@ -363,10 +386,13 @@ func TestReadAllBounded(t *testing.T) {
 		if len(rs) > 3 {
 			t.Fatalf("%d responses kept, limit 3", len(rs))
 		}
-		if len(rs) == 3 && dropped > 0 {
+		if len(rs) == 3 && full {
+			if d := time.Since(start); d > 3*time.Second {
+				t.Fatalf("took %v: the limit did not end the collection", d)
+			}
 			return
 		}
-		t.Logf("attempt %d: %d kept, %d dropped", attempt, len(rs), dropped)
+		t.Logf("attempt %d: %d kept", attempt, len(rs))
 	}
 	t.Fatal("the flood never exceeded the limit")
 }
