@@ -176,6 +176,9 @@ func TestInputFilesBounded(t *testing.T) {
 	if _, err := readFileLimited(filepath.Join(t.TempDir(), "missing"), 10); err == nil {
 		t.Fatal("a missing file read")
 	}
+	if _, err := readFileLimited(t.TempDir(), 10); err == nil {
+		t.Fatal("a directory read")
+	}
 }
 
 // diagnose checked its credentials after talking to the server: a bad
@@ -212,6 +215,10 @@ func TestInterruptedIsNotATimeout(t *testing.T) {
 	timeout := &errs.Error{Kind: errs.KindTimeout, Code: errs.CodeTimeout, Message: "late"}
 	if e := interrupted(context.Background(), timeout); e != timeout {
 		t.Fatalf("%v", e)
+	}
+	// A timeout of a cancelled command is the interruption.
+	if e := interrupted(ctx, timeout); e.Kind != errs.KindInterrupted || e.Code != errs.CodeCanceled || e.Cause != timeout {
+		t.Fatalf("cancelled timeout: %+v", e)
 	}
 }
 

@@ -119,24 +119,24 @@ func remoteContext(ctx context.Context, a *app) (context.Context, context.Cancel
 // device that answers more entries than asked does not shift the index.
 func findObject(n int, objType uint16, read func(start uint16, count uint8) ([]byte, error)) (uint8, bool, error) {
 	n = min(n, 256)
+	var idx uint8 // the index of the entry being compared
 	for start := 1; start <= n; start += 15 {
 		count := min(15, n-start+1)
 		b, err := read(uint16(max(min(start, 0xFFFF), 0)), uint8(max(min(count, 15), 0)))
 		if err != nil {
 			return 0, false, err
 		}
-		for i := 0; i+1 < len(b) && i/2 < count; i += 2 {
-			if uint16(b[i])<<8|uint16(b[i+1]) != objType {
-				continue
+		for i := 0; i < count; i++ {
+			if 2*i+1 >= len(b) {
+				return 0, false, nil // a short answer: no entries beyond it
 			}
-			idx := start - 1 + i/2
-			if idx < 0 {
-				break
+			if uint16(b[2*i])<<8|uint16(b[2*i+1]) == objType {
+				return idx, true, nil
 			}
-			if idx > 0xFF {
-				break
+			if idx == 0xFF {
+				return 0, false, nil
 			}
-			return uint8(idx), true, nil
+			idx++
 		}
 	}
 	return 0, false, nil

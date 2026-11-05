@@ -422,3 +422,44 @@ func TestChaosDiscoverAnswerAmidNoise(t *testing.T) {
 	}
 	t.Fatal("the answer was never found among the noise")
 }
+
+// group read --all ends at its limit with a warning, long before its
+// window. Not parallel: it lowers readLimit.
+func TestReadAllLimitWarns(t *testing.T) {
+	old := readLimit
+	readLimit = 3
+	defer func() { readLimit = old }()
+	a := &acceptor{flood: 400, confirm: true}
+	p := startHostile(t, a.handle)
+	for attempt := range 5 {
+		r := within(t, 10*time.Second, "group", "read", "1/2/4", "--all", "5s", "-g", p.addr, "--timeout", "2s", "--format", "json")
+		if r.code == 0 && strings.Contains(r.errOut, "stopped at the first 3 responses") {
+			if n := len(resultOf(t, r, "group read")["responses"].([]any)); n != 3 {
+				t.Fatalf("%d responses, limit 3", n)
+			}
+			return
+		}
+		t.Logf("attempt %d: exit %d %s", attempt, r.code, r.errOut)
+	}
+	t.Fatal("the limit never ended the read")
+}
+
+// Cancelling the command during the window ends readAll with the
+// cancellation, not with the responses so far.
+func TestReadAllCancelled(t *testing.T) {
+	t.Parallel()
+	a := &acceptor{confirm: true}
+	p := startHostile(t, a.handle)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, err := client.DialTunnel(ctx, p.addr, []tunnel.Option{tunnel.WithConnectTimeout(2 * time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = c.Close() }()
+	rctx, rcancel := context.WithCancel(ctx)
+	time.AfterFunc(300*time.Millisecond, rcancel)
+	if _, _, err := readAll(rctx, c, knx.MustParseGroupAddress("1/2/4"), 5*time.Second, 3); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err %v", err)
+	}
+}

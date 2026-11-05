@@ -173,12 +173,12 @@ every response during the given window, at most 1000 (the read ends at the
 			defer func() { _ = c.Close() }()
 			res := readResult{Group: g.String(), Responses: []telegramRecord{}}
 			if all > 0 {
-				rs, full, err := readAll(ctx, c, g, all, maxReadResponses)
+				rs, full, err := readAll(ctx, c, g, all, readLimit)
 				if err != nil {
 					return err
 				}
 				if full {
-					a.warn("stopped at the first %d responses", maxReadResponses)
+					a.warn("stopped at the first %d responses", readLimit)
 				}
 				for _, t := range rs {
 					res.Responses = append(res.Responses, newTelegramRecord(t, ty))
@@ -210,6 +210,10 @@ every response during the given window, at most 1000 (the read ends at the
 // flooding peer (routing multicast is open to every host on the network)
 // cannot grow the result without limit.
 const maxReadResponses = 1000
+
+// readLimit is the limit group read --all applies: maxReadResponses, set
+// lower by tests (never in parallel with others).
+var readLimit = maxReadResponses
 
 // readAll sends A_GroupValue_Read to g and collects the responses during
 // window, at most limit of them (go-knx returns as soon as it has that

@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -126,5 +127,26 @@ func TestFindObjectBounds(t *testing.T) {
 	_, _, _ = findObject(65535, 0xFFFF, read)
 	if reads > 18 {
 		t.Fatalf("%d reads for a 65535-entry list", reads)
+	}
+}
+
+// A read error ends the search with it; a device that answers fewer
+// entries than asked has none beyond them.
+func TestFindObjectErrors(t *testing.T) {
+	boom := errors.New("boom")
+	if _, _, err := findObject(20, 1, func(uint16, uint8) ([]byte, error) { return nil, boom }); !errors.Is(err, boom) {
+		t.Fatalf("read error: %v", err)
+	}
+	short := func(start uint16, _ uint8) ([]byte, error) {
+		if start == 1 {
+			return []byte{0x10, 0x00, 0x10, 0x01}, nil // 2 of 15 entries
+		}
+		return []byte{0x10, 0x02}, nil
+	}
+	if idx, ok, err := findObject(20, 0x1001, short); err != nil || !ok || idx != 1 {
+		t.Fatalf("entry in a short answer: %d %v %v", idx, ok, err)
+	}
+	if _, ok, err := findObject(20, 0x1002, short); err != nil || ok {
+		t.Fatalf("entry past a short answer found (%v)", err)
 	}
 }

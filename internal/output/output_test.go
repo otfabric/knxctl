@@ -103,3 +103,16 @@ func TestStream(t *testing.T) {
 		t.Fatal("no write error")
 	}
 }
+
+func TestWriteErrorLine(t *testing.T) {
+	var b bytes.Buffer
+	if err := WriteErrorLine(&b, map[string]string{"kind": "timeout"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := b.String(), `{"schemaVersion":"1.0","error":{"kind":"timeout"}}`+"\n"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	if err := WriteErrorLine(&b, badJSON{}); err == nil {
+		t.Fatal("no error for an unencodable error document")
+	}
+}
