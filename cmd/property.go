@@ -3,12 +3,14 @@
 package cmd
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/otfabric/go-knx/devmgmt"
+	"github.com/otfabric/go-knx/knxnetip"
 	"github.com/otfabric/go-knx/tunnel"
 	"github.com/otfabric/knxctl/internal/errs"
 	"github.com/spf13/cobra"
@@ -108,7 +110,12 @@ access); --connected uses a transport connection.`,
 				return err
 			}
 			defer func() { _ = c.Close() }()
-			b, err := c.PropRead(cmd.Context(), obj, instance, uint8(pid), start, count)
+			// go-knx waits for the M_PropRead.con as long as the context
+			// lives: a server that acknowledges and never answers would
+			// hold the command forever.
+			rctx, rcancel := context.WithTimeout(cmd.Context(), a.timeout)
+			defer rcancel()
+			b, err := c.PropRead(rctx, obj, instance, uint8(pid), start, count)
 			if err != nil {
 				return err
 			}
@@ -180,6 +187,16 @@ func dialDevMgmt(cmd *cobra.Command, a *app, host string, tcp, nat bool, sec *se
 	return devmgmt.Dial(cmd.Context(), host, opts...)
 }
 
+// The longest data of one property write: M_PropWrite.req in a
+// DEVICE_CONFIGURATION_REQUEST of at most knxnetip.MaxFrameLen octets
+// (6 header, 4 connection header, 7 cEMI property header), and
+// A_PropertyValue_Write in an APDU of at most 254 octets (2 APCI, 4
+// property header).
+const (
+	maxLocalPropData  = knxnetip.MaxFrameLen - 6 - 4 - 7
+	maxRemotePropData = 254 - 2 - 4
+)
+
 func newPropertyWriteCmd(a *app) *cobra.Command {
 	var sec secureFlags
 	var instance, count uint8
@@ -190,7 +207,8 @@ func newPropertyWriteCmd(a *app) *cobra.Command {
 		Use:   "write host[:port] <object> <pid> <hex data>",
 		Short: "Write a property (local M_PropWrite, or A_PropertyValue_Write of a device with --device)",
 		Long: `Open a device management connection and write count elements of a property
-from element start; the data holds the count elements, hexadecimal. The server
+from element start; the data holds the count elements, hexadecimal (at most
+1007 octets, with --device 248). The server
 answers with the written elements, or with none when it refuses (read only,
 wrong type or length). This changes the server's configuration.
 
@@ -220,6 +238,15 @@ as for property read. This changes the device's configuration.`,
 			}
 			if len(data)%int(count) != 0 {
 				return errs.Invalid("%d octets do not divide into %d elements", len(data), count)
+			}
+			// go-knx refuses longer data only when sending: after
+			// connecting, and locally by dropping the connection (exit 4).
+			limit := maxLocalPropData
+			if rf.device != "" {
+				limit = maxRemotePropData
+			}
+			if len(data) > limit {
+				return errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "data: %d octets, at most %d fit in one property write", len(data), limit)
 			}
 			if rf.device != "" {
 				if instance != 1 {
@@ -251,7 +278,9 @@ as for property read. This changes the device's configuration.`,
 				return err
 			}
 			defer func() { _ = c.Close() }()
-			if err := c.PropWrite(cmd.Context(), obj, instance, uint8(pid), start, count, data); err != nil {
+			wctx, wcancel := context.WithTimeout(cmd.Context(), a.timeout)
+			defer wcancel()
+			if err := c.PropWrite(wctx, obj, instance, uint8(pid), start, count, data); err != nil {
 				return err
 			}
 			return a.emit("property write", propertyResult{Server: args[0], ObjectType: obj, Instance: instance, PropertyID: uint8(pid), Start: start, Count: count, Data: strings.ToUpper(hex.EncodeToString(data))})

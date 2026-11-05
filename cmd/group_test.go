@@ -191,7 +191,7 @@ func TestGroupAnswer(t *testing.T) {
 	s := startServer(t)
 	b := start(t, "group", "answer", "5/5/5", "42", "--dpt", "5.010", "--count", "2", "-g", s.addr)
 	b.waitErr(t, "answering reads of 5/5/5")
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		r := run(t, "group", "read", "5/5/5", "--dpt", "5.010", "-g", s.addr, "--format", "json")
 		res := resultOf(t, r, "group read")
 		resp := res["responses"].([]any)[0].(map[string]any)

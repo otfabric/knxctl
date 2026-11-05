@@ -107,7 +107,7 @@ func TestKeyringFlags(t *testing.T) {
 // freeBothPort returns a port free for UDP and TCP on 127.0.0.1.
 func freeBothPort(t *testing.T) string {
 	t.Helper()
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		u, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
 		if err != nil {
 			t.Fatal(err)

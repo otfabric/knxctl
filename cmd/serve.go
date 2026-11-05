@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -117,7 +116,7 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := serveConfig{Name: name, Address: addr, Tunnels: tunnels}
 			if config != "" {
-				b, err := os.ReadFile(config)
+				b, err := readFileLimited(config, maxConfigSize)
 				if err != nil {
 					return errs.New(errs.KindInvalidInput, errs.CodeInvalidInput, "--config: %v", err)
 				}

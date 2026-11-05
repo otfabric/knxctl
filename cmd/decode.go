@@ -148,7 +148,7 @@ func newDecodeCmd(a *app) *cobra.Command {
   knxctl decode --cemi 2900bce0110a0a03010081`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			b, err := hex.DecodeString(strings.ReplaceAll(strings.TrimPrefix(args[0], "0x"), " ", ""))
+			b, err := decodeHex(args[0])
 			if err != nil {
 				return errs.Invalid("%q: want hexadecimal octets", args[0])
 			}

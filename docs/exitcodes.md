@@ -16,14 +16,14 @@ The table follows the organisation table
 | 0 | | Success. Streams (`monitor`, `group listen`, `routing monitor`, `group answer`, `serve`) also end with 0 at `--count`, `--duration` or Ctrl-C (SIGINT/SIGTERM) |
 | 1 | | Findings: a result was written and it reports problems — `diagnose` had a failing check. No error document follows |
 | 2 | `usage` | Unknown command or flag, missing argument, a value a flag cannot hold, no `--gateway`/`--routing` for a command that needs the KNX network, neither a value nor `--raw` for a write. A negative value read as a flag (`-30`) also exits 2: put `--` before the arguments |
-| 3 | `invalid_input` | A group or individual address, datapoint type, value, hex string, `--map` entry, `--object` specification, configuration file or flag combination that does not make sense. Nothing was sent |
+| 3 | `invalid_input` | A group or individual address, datapoint type, value, hex string, `--map` entry, `--object` specification, configuration file or flag combination that does not make sense; a negative `--count`, `--duration`, `--all` or `--hold`; data longer than one frame holds (`--raw` over 254 octets, property data over 1007 octets or 248 with `--device`, a feature value over 1012 octets: `code` `invalid_value`); a keyring or `--config` file over 16 MiB. Nothing was sent |
 | 4 | `transport` | The network failed: a socket could not be opened or bound (port in use), the tunnelling connection was lost or closed by the server |
 | 5 | `timeout` | A deadline passed: the KNXnet/IP server did not answer a connect or description request, or no device answered `group read` (`code` is `timeout`; with `--all` and no response in the window `no_response`) |
 | 6 | `protocol`, `rejected` | A malformed frame (`decode`, or from the server), a telegram the server did not confirm (`not_confirmed`), a KNX Secure failure. `rejected`: the KNXnet/IP server refused the request: no free tunnelling slot, an unknown tunnelling address, busy (`code` `rejected` or `busy`) |
 | 8 | `unsupported` | The server or go-knx does not support what was asked |
 | 9 | `permission` | The operating system refused an operation (for example binding a privileged port) |
 | 10 | `output`, `internal` | The result could not be written, or something unexpected happened |
-| 130 | `interrupted` | Ctrl-C (SIGINT) or SIGTERM stopped a command before it had a result, for example while connecting (`code` `canceled`). Streams stopped by Ctrl-C end with 0 |
+| 130 | `interrupted` | Ctrl-C (SIGINT) or SIGTERM stopped a command before it had a result, for example while connecting or waiting for a device's answer (`code` `canceled`). Streams stopped by Ctrl-C end with 0 |
 
 `kind` selects the exit code; `code` in the JSON error is a stable, finer
 identifier:
@@ -53,4 +53,11 @@ identifier:
 before connecting: an invocation that exits 2 or 3 has sent nothing.
 
 **Streams** that lose their link (the server disconnects the tunnel) end
-with exit 4 and an error document.
+with exit 4 and an error document; with `--format json` it is one line, so
+that the output stays JSON Lines.
+
+**Every request is bounded by `--timeout`**, also when the server
+acknowledges a request and never answers it: `property read` and `property
+write` (local device management) and `tunnel feature get`/`set` end with 5
+at `--timeout`; remote device management (`--device`) at `--timeout` plus
+5 s.

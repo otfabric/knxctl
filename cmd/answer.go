@@ -58,6 +58,12 @@ group: use it on test installations and simulators.`,
 			if err != nil {
 				return err
 			}
+			if err := checkCount("count", count); err != nil {
+				return err
+			}
+			if err := checkDuration("duration", duration); err != nil {
+				return err
+			}
 			ctx := cmd.Context()
 			if duration > 0 {
 				var cancel context.CancelFunc
@@ -99,9 +105,9 @@ group: use it on test installations and simulators.`,
 	}
 	lf.add(cmd)
 	cmd.Flags().StringVarP(&dptID, "dpt", "t", "", "Datapoint type of the value")
-	cmd.Flags().StringVar(&raw, "raw", "", "Answer with these octets (hexadecimal)")
+	cmd.Flags().StringVar(&raw, "raw", "", "Answer with these octets (hexadecimal, 1..254)")
 	cmd.Flags().BoolVar(&small, "small", false, "With --raw: one octet 00..3F in the APCI")
-	cmd.Flags().IntVarP(&count, "count", "n", 0, "Stop after this many answers")
-	cmd.Flags().DurationVar(&duration, "duration", 0, "Stop after this time")
+	cmd.Flags().IntVarP(&count, "count", "n", 0, "Stop after this many answers (0: no limit)")
+	cmd.Flags().DurationVar(&duration, "duration", 0, "Stop after this time (0: no limit)")
 	return cmd
 }

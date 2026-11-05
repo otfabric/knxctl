@@ -1,6 +1,6 @@
 # knxctl
 
-[![Go Version](https://img.shields.io/badge/Go-1.23%2B-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI Status](https://github.com/otfabric/knxctl/actions/workflows/ci.yml/badge.svg)](https://github.com/otfabric/knxctl/actions/workflows/ci.yml)
 [![Code Coverage](https://codecov.io/gh/otfabric/knxctl/graph/badge.svg)](https://codecov.io/gh/otfabric/knxctl)

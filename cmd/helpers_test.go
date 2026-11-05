@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -163,7 +164,7 @@ func jsonDoc(t *testing.T, s string) map[string]any {
 func jsonLines(t *testing.T, s string) []map[string]any {
 	t.Helper()
 	var out []map[string]any
-	for _, l := range strings.Split(strings.TrimSpace(s), "\n") {
+	for l := range strings.SplitSeq(strings.TrimSpace(s), "\n") {
 		if l != "" {
 			out = append(out, jsonDoc(t, l))
 		}
@@ -278,8 +279,8 @@ func (s *testServer) last(g string, svc apdu.APCI) (apdu.GroupValue, server.Tele
 	ga := knx.MustParseGroupAddress(g)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for i := len(s.telegrams) - 1; i >= 0; i-- {
-		tg := s.telegrams[i]
+	for _, tg := range slices.Backward(s.telegrams) {
+
 		if dst, ok := tg.Frame.Group(); !ok || dst != ga {
 			continue
 		}
@@ -370,7 +371,7 @@ func probeMulticast() error {
 	defer tx.Close()
 	ga := knx.MustParseGroupAddress("31/7/255")
 	sub := rx.Subscribe(4, ga)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		if err := tx.GroupWrite(ctx, ga, true); err != nil {
 			return err
 		}

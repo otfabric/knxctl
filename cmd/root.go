@@ -37,6 +37,9 @@ type app struct {
 	errOut  io.Writer
 	format  output.Format
 	started bool
+	// streamed is set once a command writes a record stream: its error
+	// document must be one JSON line.
+	streamed bool
 
 	timeout time.Duration
 	iface   string
@@ -168,7 +171,10 @@ func (a *app) emit(command string, r output.Result) error {
 }
 
 // stream returns a record stream on stdout.
-func (a *app) stream() *output.Stream { return output.NewStream(a.out, a.format) }
+func (a *app) stream() *output.Stream {
+	a.streamed = true
+	return output.NewStream(a.out, a.format)
+}
 
 // warn writes a diagnostic line to stderr.
 func (a *app) warn(format string, args ...any) {
@@ -195,16 +201,19 @@ func Run(ctx context.Context, args []string, in io.Reader, out, errOut io.Writer
 	var e *errs.Error
 	if !a.started || isUsage(err) {
 		e = &errs.Error{Kind: errs.KindUsage, Code: errs.CodeInvalidInput, Message: err.Error(), Cause: err}
-		var typed *errs.Error
-		if errors.As(err, &typed) {
+		if typed, ok := errors.AsType[*errs.Error](err); ok {
 			e = typed
 		}
 	} else {
 		e = errs.Classify(err)
+		e = interrupted(ctx, e)
 	}
-	if a.format == output.JSON {
+	switch {
+	case a.format == output.JSON && a.streamed:
+		_ = output.WriteErrorLine(out, e)
+	case a.format == output.JSON:
 		_ = output.WriteError(out, e)
-	} else {
+	default:
 		_, _ = fmt.Fprintf(errOut, "error: %s\n", e.Message)
 		if strings.Contains(e.Message, "unknown shorthand flag") && negativeArg(args) {
 			_, _ = fmt.Fprintln(errOut, "A negative value is read as a flag: put -- before the arguments, for example knxctl group write --dpt 9.001 -g host -- 1/2/4 -30")
@@ -214,6 +223,22 @@ func Run(ctx context.Context, args []string, in io.Reader, out, errOut io.Writer
 		}
 	}
 	return errs.ExitCode(e.Kind)
+}
+
+// interrupted reports a failure of a command whose context was cancelled
+// (SIGINT, SIGTERM) as an interruption: go-knx reports some waits that
+// ended with the context as a timeout ("no answer from"), which would
+// otherwise exit 5 instead of 130. Input errors stay what they are.
+func interrupted(ctx context.Context, e *errs.Error) *errs.Error {
+	if !errors.Is(ctx.Err(), context.Canceled) {
+		return e
+	}
+	switch e.Kind {
+	case errs.KindUsage, errs.KindInvalidInput, errs.KindInterrupted, errs.KindOutput, errs.KindPermission:
+		return e
+	case errs.KindTransport, errs.KindTimeout, errs.KindProtocol, errs.KindRejected, errs.KindUnsupported, errs.KindInternal:
+	}
+	return &errs.Error{Kind: errs.KindInterrupted, Code: errs.CodeCanceled, Message: "interrupted: " + e.Message, Cause: e}
 }
 
 // negativeArg reports an argument that looks like a negative number.
@@ -228,8 +253,7 @@ func negativeArg(args []string) bool {
 
 // isUsage recognises cobra's own errors about the command line.
 func isUsage(err error) bool {
-	var typed *errs.Error
-	if errors.As(err, &typed) {
+	if _, ok := errors.AsType[*errs.Error](err); ok {
 		return false
 	}
 	msg := err.Error()

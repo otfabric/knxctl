@@ -53,7 +53,12 @@ func (s *secureFlags) keyring() (*keyring.Keyring, error) {
 	if s.keyringPath == "" || s.kr != nil {
 		return s.kr, nil
 	}
-	kr, err := keyring.LoadFile(s.keyringPath, s.keyringPassword)
+	// keyring.LoadFile reads a file of any size.
+	b, err := readFileLimited(s.keyringPath, maxKeyringSize)
+	if err != nil {
+		return nil, errs.New(errs.KindInvalidInput, errs.CodeInvalidInput, "--keyring: %v", err)
+	}
+	kr, err := keyring.Parse(b, s.keyringPassword)
 	if err != nil {
 		return nil, errs.New(errs.KindInvalidInput, errs.CodeInvalidInput, "--keyring: %v", err)
 	}

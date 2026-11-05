@@ -50,6 +50,9 @@ is sent onto the KNX network.`,
 		Example: "  knxctl tunnel connect 192.168.1.10\n  knxctl tunnel connect 192.168.1.10 --hold 2m --heartbeat 30s",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkDuration("hold", hold); err != nil {
+				return err
+			}
 			opts := []tunnel.Option{tunnel.WithLogger(a.logger), tunnel.WithNAT(nat), tunnel.WithConnectTimeout(a.timeout), tunnel.WithHeartbeat(heartbeat, tunnel.DefaultHeartbeatTimeout, tunnel.DefaultHeartbeatAttempts)}
 			if a.local != "" {
 				opts = append(opts, tunnel.WithLocalAddr(a.local))
@@ -155,6 +158,12 @@ network. Exits 1 when a check fails.`,
 		Example: "  knxctl diagnose 192.168.1.10\n  knxctl diagnose 192.168.1.10 --format json",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Credentials are input: a bad one ends the command before
+			// it talks to the server.
+			cred, err := sec.credentials("")
+			if err != nil {
+				return err
+			}
 			ctx := cmd.Context()
 			res := diagnoseResult{Server: args[0], OK: true}
 			run := func(name string, f func() (string, error)) bool {
@@ -202,10 +211,6 @@ network. Exits 1 when a check fails.`,
 				}
 				return fmt.Sprintf("tunnelling v%d", v), nil
 			})
-			cred, cerr := sec.credentials("")
-			if cerr != nil {
-				return cerr
-			}
 			if secured, ok := dibs.SecuredServices(); ok && len(secured.Families) > 0 {
 				run("security", func() (string, error) {
 					var names []string
@@ -239,7 +244,7 @@ network. Exits 1 when a check fails.`,
 			})
 			if conn != nil {
 				run("heartbeat", func() (string, error) {
-					hctx, cancel := context.WithTimeout(ctx, a.timeout+time.Second)
+					hctx, cancel := context.WithTimeout(ctx, addDuration(a.timeout, time.Second))
 					defer cancel()
 					select {
 					case <-time.After(1200 * time.Millisecond):

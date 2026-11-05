@@ -32,7 +32,7 @@ func newDPTRecord(t *dpt.Type) dptRecord {
 		mn, mx := t.Min, t.Max
 		r.Min, r.Max = &mn, &mx
 	}
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if n, ok := t.Enum[uint8(i)]; ok {
 			r.Enum = append(r.Enum, fmt.Sprintf("%d=%s", i, n))
 		}
@@ -111,6 +111,9 @@ func newDPTCmd(a *app) *cobra.Command {
 		Example: "  knxctl dpt list\n  knxctl dpt list --main 9",
 		Args:    cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
+			if main < 0 || main > 0xFFFF {
+				return errs.Invalid("--main %d: a main number 1..65535 (0: all)", main)
+			}
 			l := dptList{Types: []dptRecord{}}
 			for _, t := range dpt.All() {
 				if main == 0 || int(t.ID.Main) == main {
@@ -120,7 +123,7 @@ func newDPTCmd(a *app) *cobra.Command {
 			return a.emit("dpt list", l)
 		},
 	}
-	list.Flags().IntVar(&main, "main", 0, "Only the subtypes of this main number")
+	list.Flags().IntVar(&main, "main", 0, "Only the subtypes of this main number (0: all)")
 	describe := &cobra.Command{
 		Use:     "describe <dpt>",
 		Short:   "Describe a datapoint type",
@@ -165,7 +168,7 @@ func newDPTCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			b, err := hex.DecodeString(strings.ReplaceAll(strings.TrimPrefix(args[1], "0x"), " ", ""))
+			b, err := decodeHex(args[1])
 			if err != nil {
 				return errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "%q: want hexadecimal octets", args[1])
 			}

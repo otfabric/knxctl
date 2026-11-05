@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -71,6 +72,11 @@ func featureName(f knxnetip.FeatureID) string {
 	return fmt.Sprintf("feature-%d", f)
 }
 
+// maxFeatureValue is the longest value of TUNNELLING_FEATURE_SET in a
+// frame of knxnetip.MaxFrameLen octets (6 header, 4 connection header,
+// feature identifier and return code).
+const maxFeatureValue = knxnetip.MaxFrameLen - 6 - 4 - 2
+
 func newTunnelFeatureCmd(a *app) *cobra.Command {
 	cmd := &cobra.Command{Use: "feature", Short: "Tunnelling v2 interface feature services (TUNNELLING_FEATURE_GET/_SET)"}
 	var sec secureFlags
@@ -96,14 +102,17 @@ func newTunnelFeatureCmd(a *app) *cobra.Command {
 		}
 		defer func() { _ = conn.Close() }()
 		r := featureResult{Server: host, Feature: featureName(f), ID: uint8(f)}
+		// The feature services wait a fixed 3 s; --timeout bounds them.
+		ctx, cancel := context.WithTimeout(c.Context(), a.timeout)
+		defer cancel()
 		if set {
-			if err := conn.FeatureSet(c.Context(), f, value); err != nil {
+			if err := conn.FeatureSet(ctx, f, value); err != nil {
 				return err
 			}
 			r.Set, r.Value = true, strings.ToUpper(hex.EncodeToString(value))
 			return a.emit("tunnel feature set", r)
 		}
-		v, err := conn.FeatureGet(c.Context(), f)
+		v, err := conn.FeatureGet(ctx, f)
 		if err != nil {
 			return err
 		}
@@ -127,6 +136,7 @@ func newTunnelFeatureCmd(a *app) *cobra.Command {
 	}
 	set := &cobra.Command{
 		Use:     "set host[:port] <feature> <hex value>",
+		Long:    "Write an interface feature of a tunnelling v2 server (info-service) through a\ntunnelling connection (TCP by default); the value is 1..1012 octets, hexadecimal.\nNothing is sent onto the KNX network.",
 		Short:   "Write an interface feature of a tunnelling v2 server (info-service)",
 		Example: "  knxctl tunnel feature set 192.168.1.10 info-service 01",
 		Args:    cobra.ExactArgs(3),
@@ -135,9 +145,12 @@ func newTunnelFeatureCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			v, err := hex.DecodeString(args[2])
+			v, err := decodeHex(args[2])
 			if err != nil || len(v) == 0 {
 				return errs.Invalid("value %q: hexadecimal octets", args[2])
+			}
+			if len(v) > maxFeatureValue {
+				return errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "value: %d octets, at most %d", len(v), maxFeatureValue)
 			}
 			return run(c, args[0], true, f, v)
 		},

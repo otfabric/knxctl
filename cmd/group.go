@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/otfabric/go-knx"
+	"github.com/otfabric/go-knx/client"
 	"github.com/otfabric/go-knx/dpt"
 	"github.com/otfabric/knxctl/internal/errs"
 	"github.com/spf13/cobra"
@@ -113,7 +114,7 @@ func newGroupWriteCmd(a *app, respond bool) *cobra.Command {
 	}
 	lf.add(cmd)
 	cmd.Flags().StringVarP(&dptID, "dpt", "t", "", "Datapoint type of the value (9.001)")
-	cmd.Flags().StringVar(&raw, "raw", "", "Send these octets (hexadecimal) instead of a value")
+	cmd.Flags().StringVar(&raw, "raw", "", "Send these octets (hexadecimal, 1..254) instead of a value")
 	cmd.Flags().BoolVar(&small, "small", false, "With --raw: send one octet 00..3F in the APCI (6-bit value)")
 	return cmd
 }
@@ -144,7 +145,8 @@ func newGroupReadCmd(a *app) *cobra.Command {
 		Long: `Send A_GroupValue_Read and print the first A_GroupValue_Response within
 --timeout. A response is not guaranteed: the read times out (exit 5) when no
 device answers. Several devices may answer the same address; --all collects
-every response during the given window.`,
+every response during the given window, at most 1000 (the read ends at the
+1000th, with a warning).`,
 		Example: `  knxctl group read 1/2/4 --dpt 9.001 --gateway 192.168.1.10
   knxctl group read 1/2/4 --all 2s --gateway 192.168.1.10 --format json`,
 		Args: cobra.ExactArgs(1),
@@ -159,7 +161,10 @@ every response during the given window.`,
 					return err
 				}
 			}
-			ctx, cancel := context.WithTimeout(cmd.Context(), a.timeout+all)
+			if err := checkDuration("all", all); err != nil {
+				return err
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), addDuration(a.timeout, all))
 			defer cancel()
 			c, err := lf.open(ctx, a)
 			if err != nil {
@@ -168,12 +173,15 @@ every response during the given window.`,
 			defer func() { _ = c.Close() }()
 			res := readResult{Group: g.String(), Responses: []telegramRecord{}}
 			if all > 0 {
-				rs, err := c.GroupReadAll(ctx, g, all)
+				rs, full, err := readAll(ctx, c, g, all, readLimit)
 				if err != nil {
 					return err
 				}
-				for _, r := range rs {
-					res.Responses = append(res.Responses, newTelegramRecord(r.Telegram, ty))
+				if full {
+					a.warn("stopped at the first %d responses", readLimit)
+				}
+				for _, t := range rs {
+					res.Responses = append(res.Responses, newTelegramRecord(t, ty))
 				}
 				if len(rs) == 0 {
 					// One fatal error, not a result and then an error
@@ -194,12 +202,44 @@ every response during the given window.`,
 	}
 	lf.add(cmd)
 	cmd.Flags().StringVarP(&dptID, "dpt", "t", "", "Datapoint type to decode the value with (9.001)")
-	cmd.Flags().DurationVar(&all, "all", 0, "Collect every response during this window")
+	cmd.Flags().DurationVar(&all, "all", 0, "Collect every response during this window (at most 1000)")
 	return cmd
+}
+
+// maxReadResponses bounds the responses group read --all keeps: a
+// flooding peer (routing multicast is open to every host on the network)
+// cannot grow the result without limit.
+const maxReadResponses = 1000
+
+// readLimit is the limit group read --all applies: maxReadResponses, set
+// lower by tests (never in parallel with others).
+var readLimit = maxReadResponses
+
+// readAll sends A_GroupValue_Read to g and collects the responses during
+// window, at most limit of them (go-knx returns as soon as it has that
+// many). full reports that the limit ended the collection.
+func readAll(ctx context.Context, c *client.Client, g knx.GroupAddress, window time.Duration, limit int) (out []client.Telegram, full bool, err error) {
+	rs, err := c.GroupReadAll(ctx, g, window, client.WithMaxResponses(limit))
+	if err != nil {
+		return nil, false, err
+	}
+	if ctx.Err() != nil {
+		return nil, false, ctx.Err()
+	}
+	for _, r := range rs {
+		out = append(out, r.Telegram)
+	}
+	return out, len(out) >= limit, nil
 }
 
 // listen streams group telegrams until count, duration or interruption.
 func listen(ctx context.Context, a *app, lf *linkFlags, groups []knx.GroupAddress, m dptMap, def *dpt.Type, count int, duration time.Duration) error {
+	if err := checkCount("count", count); err != nil {
+		return err
+	}
+	if err := checkDuration("duration", duration); err != nil {
+		return err
+	}
 	if duration > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, duration)
@@ -258,8 +298,8 @@ type listenFlags struct {
 func (l *listenFlags) add(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&l.maps, "map", nil, "Decode a group with a datapoint type: group=dpt (repeatable)")
 	cmd.Flags().StringVarP(&l.dptID, "dpt", "t", "", "Decode every group with this datapoint type")
-	cmd.Flags().IntVarP(&l.count, "count", "n", 0, "Stop after this many telegrams")
-	cmd.Flags().DurationVar(&l.duration, "duration", 0, "Stop after this time")
+	cmd.Flags().IntVarP(&l.count, "count", "n", 0, "Stop after this many telegrams (0: no limit)")
+	cmd.Flags().DurationVar(&l.duration, "duration", 0, "Stop after this time (0: no limit)")
 }
 
 func (l *listenFlags) resolve() (dptMap, *dpt.Type, error) {
