@@ -3,6 +3,11 @@
 All notable changes are listed here; release notes are in
 [RELEASE.md](RELEASE.md).
 
+## v0.9.0 (2026-11-07)
+
+go-knx v0.8.1: routing flow control, KNX IP Secure session timers, 30 more
+datapoint types. `serve --secure-session-timeout` (default 60 s).
+
 ## v0.7.0 (2026-10-30)
 
 Exit codes follow the organisation table: `permission` is 9 (was 7),

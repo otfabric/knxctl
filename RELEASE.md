@@ -6,6 +6,35 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.9.0
+
+**Date:** 2026-11-07
+**Previous release:** v0.8.0
+
+## Summary
+
+Built on go-knx v0.8.1 (was v0.7.0): routing flow control, TCP connections kept over an unparsable frame, KNX IP Secure session timers and 30 more datapoint types. `serve` gets `--secure-session-timeout`, and docs/serve.md now describes what the simulator does.
+
+**Upgrade notes:** a secure `knxctl serve` now ends KNX IP Secure sessions idle for 60 s (was 120 s); set `--secure-session-timeout` to change it. Routing senders (`group write --routing`, `serve --routing`) are paced and pause after a ROUTING_BUSY, so a burst of telegrams takes longer. Exit codes and JSON output are unchanged.
+
+## Changes
+
+### Added
+
+- `serve --secure-session-timeout` (default 60 s): how long a KNX IP Secure session may stay idle. It needs a secure server (`--secure-user` or `--keyring`), and zero or a negative value exits 3.
+- `dpt list`, `encode`, `decode` and `serve --object` know 30 more datapoint types from go-knx v0.8.0 (239, was 209), among them 5.100, 15.000, 20.107, 21.x, 22.x, 27.001, 217.001, 222.100/101, 234.001/002, 275.100/101.
+
+### Changed
+
+- go-knx v0.8.1, through v0.8.0. The routing client and the server's routing honour ROUTING_BUSY (pause for the wait time, then a reduced rate), and the server queues and paces its routing indications instead of dropping those over the rate. A TCP connection (secure tunnel or `serve`) is kept when one frame's body does not parse, the tunnel client answers a DISCONNECT_REQUEST for another channel with E_CONNECTION_ID and keeps the tunnel, and it sends its secure session keep alive after 30 s idle (was 45 s). A secure server ends sessions idle for 60 s. See go-knx's release notes.
+
+### Documentation
+
+- docs/serve.md: the flag table lists every flag. "What is simulated" now covers TCP, busmonitor, device management of the server's device, feature services, KNX IP Secure and routing flow control; until now it listed them as not simulated.
+- README: routing sends follow flow control.
+
+---
+
 ## v0.8.0
 
 **Date:** 2026-11-05

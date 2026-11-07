@@ -27,6 +27,18 @@ knxctl serve --config site.json --routing --interface eth0
 | `--config` | | JSON configuration file (below) |
 | `--routing` | off | Also route telegrams over IP multicast (224.0.23.12:3671); needs `--listen` on port 3671 of every address (`:3671`) |
 | `--no-discovery` | off | Do not join the multicast group for search requests; directed (unicast) searches and descriptions are still answered |
+| `--no-tcp` | off | Do not accept KNXnet/IP over TCP (TCP listens on the `--listen` port) |
+| `--concurrent-busmonitor` | off | Let busmonitor connections coexist with tunnels (a real interface allows only one or the other) |
+| `--multicast` | `224.0.23.12:3671` | Multicast group of routing and discovery |
+| `--serial` | `00FA00000001` | KNX serial number, 12 hex digits |
+| `--programming-mode` | off | Announce programming mode in DEVICE_INFO |
+| `--secure-user` | | KNX IP Secure tunnelling user `id:password[:tunnel address]` (repeatable); makes the server secure |
+| `--device-password` | | Device authentication password of the secure server (env `KNXCTL_DEVICE_PASSWORD`) |
+| `--keyring`, `--keyring-password` | | Serve the secure tunnelling users of a keyring host; Data Secure telegrams of its groups are printed decrypted |
+| `--keyring-host` | first secure interface's host | Keyring device whose tunnelling interfaces to serve |
+| `--backbone-key` | the keyring's | KNX IP Secure routing backbone key with `--routing`, 32 hex digits |
+| `--secure-session-timeout` | `1m0s` | End KNX IP Secure sessions idle for this long; needs a secure server |
+| `--tool-key` | | Secure the remote device management of the server's device with this tool key, or `keyring` |
 | `--interface` (global) | | Interface whose address is announced and on which the multicast group is joined |
 
 The server listens until Ctrl-C (SIGINT/SIGTERM), then disconnects its
@@ -101,12 +113,24 @@ or value exits 3 before anything is opened.
 - KNXnet/IP core services: search (multicast and directed), extended
   search, description, connect, connection state (heartbeat), disconnect;
   connections without heartbeat for 120 s are closed.
-- Tunnelling on the link layer over UDP (tunnelling v1), including the
-  extended CRI that requests a tunnelling address, and route back (NAT)
-  endpoints. Each `L_Data.req` of a client is confirmed (`L_Data.con`) and
-  delivered as `L_Data.ind` to the other clients, the virtual devices and,
-  with `--routing`, the multicast group.
-- Routing indications (`--routing`), rate limited to 50 per second.
+- Tunnelling on the link layer over UDP and TCP, including the extended
+  CRI that requests a tunnelling address, route back (NAT) endpoints and
+  tunnelling feature services. Each `L_Data.req` of a client is confirmed
+  (`L_Data.con`) and delivered as `L_Data.ind` to the other clients, the
+  virtual devices and, with `--routing`, the multicast group.
+- Busmonitor connections (exclusive, or beside tunnels with
+  `--concurrent-busmonitor`).
+- Device management of the server's own device (`--address`): local
+  device management connections and remote device management (property
+  read, write and description) through a tunnel, with `--tool-key`
+  secured by KNX Data Secure tool access.
+- Routing indications (`--routing`), sent at most 50 per second. Outgoing
+  indications are queued and paced; after a ROUTING_BUSY from another
+  router the server pauses for its wait time and then slows down.
+- KNX IP Secure: secure tunnelling sessions (TCP and UDP) for
+  `--secure-user` or the keyring's users, ended after
+  `--secure-session-timeout` (default 60 s) without traffic, and secure
+  routing with the backbone key.
 - Group objects that store written values and answer reads according to
   their flags, at most one response per read per device.
 
@@ -114,11 +138,13 @@ or value exits 3 before anything is opened.
 
 - A physical KNX line: no bus timing, collisions, line couplers, filter
   tables, repetitions or bus load; every telegram arrives.
-- Device management: programming mode, individual address assignment,
-  memory, properties, restart, ETS download.
-- Busmonitor and raw tunnelling, device management connections,
-  KNXnet/IP over TCP, tunnelling feature services.
-- KNX Secure (KNXnet/IP Secure and KNX Data Secure).
+- Device management of the virtual devices (`--object`, `--config`), and
+  of the server's device beyond properties: individual address
+  assignment, memory, restart, ETS download.
+- Raw tunnelling.
+- KNX Data Secure group objects: Data Secure telegrams are passed on and
+  printed (decrypted with `--keyring`), but the virtual objects neither
+  decrypt nor answer them.
 - Applications: no object changes its value on its own, so `T` never fires.
 
 Use it for development, tests, demonstrations and training — not as a
