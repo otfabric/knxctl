@@ -44,7 +44,7 @@ Available Commands:
   routing     KNXnet/IP routing (IP multicast)
   serve       Run a simulated KNXnet/IP server with virtual group objects
   tunnel      KNXnet/IP tunnelling connections
-  version     Print the version of knxctl
+  version     Print the version of knxctl and go-knx
 
 Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -1095,9 +1095,9 @@ Global Flags:
 
 ```text
 Print one line: knxctl <version> (tag <tag>, commit <commit>, built <date>,
-<go version>, <os>/<arch>). The tag part is left out when the build has no
-tag. --json, or --format json, prints the same as one JSON object:
-{"name","version","tag","commit","built","go","platform"}.
+go-knx <version>, <go version>, <os>/<arch>). The tag part is left out when
+the build has no tag. --json, or --format json, prints the same as one JSON
+object: {"name","version","tag","commit","built","libraries","go","platform"}.
 
 Usage:
   knxctl version [flags]

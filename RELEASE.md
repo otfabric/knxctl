@@ -15,19 +15,19 @@ version as its notes. Add the section before running it.
 
 `knxctl version` prints the one-line format shared by every OT Fabric CLI, and `version --json` (or `--format json`) the matching JSON object. Shell completion now covers the values of every flag and argument with a fixed set, in bash, zsh, fish and PowerShell.
 
-**Upgrade notes:** the output of `version` changed (see Changed). It no longer lists the go-knx version, and its JSON is no longer wrapped in the `schemaVersion`/`command`/`result` envelope; scripts that read `version --format json` must read the new keys. No other command, exit code or JSON document changed.
+**Upgrade notes:** the output of `version` changed (see Changed). Its JSON is no longer wrapped in the `schemaVersion`/`command`/`result` envelope; scripts that read `version --format json` must read the new keys (`goKnx` is now an entry of `libraries`, `buildDate` is `built`). No other command, exit code or JSON document changed.
 
 ## Changes
 
 ### Added
 
-- `version --json`: one line, `{"name","version","tag","commit","built","go","platform"}` in that order, every key present (`"dev"`/`"unknown"` when unknown, `"tag": ""` without a tag). `--format json` and `KNXCTL_FORMAT=json` print the same.
+- `version --json`: one line, `{"name","version","tag","commit","built","libraries","go","platform"}` in that order, `libraries` the OT Fabric libraries as `[{"name":"go-knx","version":"0.8.1"}]`, every key present (`"dev"`/`"unknown"` when unknown, `"tag": ""` without a tag). `--format json` and `KNXCTL_FORMAT=json` print the same.
 - Shell completion of values: `--format`, `--priority` (low, normal, urgent, system), `--service` (service families), `--dpt`/`-t` (every datapoint type, with its name), the datapoint of `dpt describe`/`encode`/`decode`, the feature of `tunnel feature get`/`set`, the object of `property read`/`write`. `--keyring` and `keyring show` complete `.knxkeys` files and `serve --config` `.json` files; every other flag and argument (addresses, numbers, hex) completes no file names.
 
 ### Changed
 
-- `version` prints one line, `knxctl <version> (tag <tag>, commit <commit>, built <date>, <go>, <os>/<arch>)`, without the leading `v` and with the full commit; the tag part is left out without a tag. A development build (`go build`, `go run`) reports `dev` and the commit with `-dirty` from the toolchain's VCS stamp; `go install …@vX.Y.Z` reports X.Y.Z. It was three lines: `knxctl v0.9.0 (commit)`, the go-knx version, the Go version and platform.
-- `make build` injects the version without the leading `v` and the full commit.
+- `version` prints one line, `knxctl <version> (tag <tag>, commit <commit>, built <date>, go-knx <version>, <go>, <os>/<arch>)`, without the leading `v` and with the full commit; the tag part is left out without a tag. A development build (`go build`, `go run`, `make build` off a tag) reports `dev` and the commit with `-dirty` from the toolchain's VCS stamp; `go install …@vX.Y.Z` reports X.Y.Z. It was three lines: `knxctl v0.9.0 (commit)`, the go-knx version, the Go version and platform.
+- `make build` injects the version and tag only when HEAD is exactly on a tag (without the leading `v`; otherwise the binary reports `dev`) and the full commit.
 
 ### Documentation
 

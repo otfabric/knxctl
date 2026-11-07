@@ -63,14 +63,15 @@ dates and colours to their text form (`"Mon 12:30:00"`, `"#FF8000"`).
 `knxctl version --json`, or `version` with `--format json`, writes one line,
 the same object as every OT Fabric CLI, without the envelope. The keys come
 in this order and are always present; `tag` is `""` for a build without a
-tag, unknown values are `"dev"` (version) or `"unknown"`:
+tag, unknown values are `"dev"` (version) or `"unknown"`. `libraries` are
+the OT Fabric libraries the binary is built with (`[]` when none):
 
 ```json
-{"name":"knxctl","version":"0.10.0","tag":"v0.10.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-07T10:00:00Z","go":"go1.26.3","platform":"linux/amd64"}
+{"name":"knxctl","version":"0.10.0","tag":"v0.10.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-07T10:00:00Z","libraries":[{"name":"go-knx","version":"0.8.1"}],"go":"go1.26.3","platform":"linux/amd64"}
 ```
 
 The text form is one line too:
-`knxctl 0.10.0 (tag v0.10.0, commit 1802d0f9…, built 2026-11-07T10:00:00Z, go1.26.3, linux/amd64)`.
+`knxctl 0.10.0 (tag v0.10.0, commit 1802d0f9…, built 2026-11-07T10:00:00Z, go-knx 0.8.1, go1.26.3, linux/amd64)`.
 
 ## Streams
 

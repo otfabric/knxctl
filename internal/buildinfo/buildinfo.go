@@ -9,9 +9,11 @@ package buildinfo
 import (
 	"bytes"
 	"encoding/json"
+	"path"
 	"regexp"
 	"runtime"
 	"runtime/debug"
+	"slices"
 	"strings"
 )
 
@@ -48,25 +50,57 @@ func Set(v, t, c, d string) {
 // Info is the resolved build metadata. Every field is set: unknown values
 // are "dev" (version) or "unknown"; Tag alone is empty when there is none.
 type Info struct {
-	Name     string `json:"name"`
-	Version  string `json:"version"`
-	Tag      string `json:"tag"`
-	Commit   string `json:"commit"`
-	Built    string `json:"built"`
-	Go       string `json:"go"`
-	Platform string `json:"platform"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Tag     string `json:"tag"`
+	Commit  string `json:"commit"`
+	Built   string `json:"built"`
+	// Libraries are the OT Fabric libraries (github.com/otfabric/go-*)
+	// the binary is built with, sorted by name; never nil.
+	Libraries []Library `json:"libraries"`
+	Go        string    `json:"go"`
+	Platform  string    `json:"platform"`
+}
+
+// Library is an OT Fabric library and its version (without the leading v).
+type Library struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// libraries returns the github.com/otfabric/go-* dependencies of bi other
+// than its main module, a replacement standing for the module it replaces.
+func libraries(bi *debug.BuildInfo) []Library {
+	libs := []Library{}
+	for _, d := range bi.Deps {
+		m := d
+		if d.Replace != nil {
+			m = d.Replace
+		}
+		if !strings.HasPrefix(d.Path, "github.com/otfabric/go-") || d.Path == bi.Main.Path {
+			continue
+		}
+		v := m.Version
+		if v == "" {
+			v = d.Version
+		}
+		libs = append(libs, Library{Name: path.Base(d.Path), Version: strings.TrimPrefix(v, "v")})
+	}
+	slices.SortFunc(libs, func(a, b Library) int { return strings.Compare(a.Name, b.Name) })
+	return libs
 }
 
 // Get resolves the build metadata of the program name.
 func Get(name string) Info {
 	i := Info{
 		Name: name, Version: strings.TrimPrefix(version, "v"), Tag: tag, Commit: commit, Built: buildDate,
-		Go: runtime.Version(), Platform: runtime.GOOS + "/" + runtime.GOARCH,
+		Libraries: []Library{}, Go: runtime.Version(), Platform: runtime.GOOS + "/" + runtime.GOARCH,
 	}
 	if i.Version == "dev" {
 		i.Version = ""
 	}
 	if bi, ok := readBuildInfo(); ok && bi != nil {
+		i.Libraries = libraries(bi)
 		// "go install github.com/otfabric/knxctl@vX.Y.Z" injects nothing;
 		// the module version says it. go build of a checkout stamps a
 		// pseudo-version: that is a development build.
@@ -105,21 +139,29 @@ func Get(name string) Info {
 }
 
 // Text is the one-line form:
-// name version (tag t, commit c, built d, go, goos/goarch); the tag part is
-// left out when there is no tag.
+// name version (tag t, commit c, built d, lib v, ..., go, goos/goarch); the
+// tag part is left out when there is no tag, the libraries when there are
+// none.
 func (i Info) Text() string {
 	var b strings.Builder
 	b.WriteString(i.Name + " " + i.Version + " (")
 	if i.Tag != "" {
 		b.WriteString("tag " + i.Tag + ", ")
 	}
-	b.WriteString("commit " + i.Commit + ", built " + i.Built + ", " + i.Go + ", " + i.Platform + ")")
+	b.WriteString("commit " + i.Commit + ", built " + i.Built + ", ")
+	for _, l := range i.Libraries {
+		b.WriteString(l.Name + " " + l.Version + ", ")
+	}
+	b.WriteString(i.Go + ", " + i.Platform + ")")
 	return b.String()
 }
 
 // JSON is the one-line JSON form, keys in the order name, version, tag,
-// commit, built, go, platform.
+// commit, built, libraries, go, platform.
 func (i Info) JSON() string {
+	if i.Libraries == nil {
+		i.Libraries = []Library{}
+	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)

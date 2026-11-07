@@ -4,14 +4,30 @@ package cmd
 
 import (
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"testing"
 
 	"github.com/otfabric/knxctl/internal/errs"
 )
 
+// goKNXVersion is the go-knx version the test binary is built with.
+func goKNXVersion(t *testing.T) string {
+	t.Helper()
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, d := range bi.Deps {
+			if d.Path == "github.com/otfabric/go-knx" {
+				return strings.TrimPrefix(d.Version, "v")
+			}
+		}
+	}
+	t.Fatal("no go-knx in the build information")
+	return ""
+}
+
 func TestVersion(t *testing.T) {
-	platform := runtime.Version() + ", " + runtime.GOOS + "/" + runtime.GOARCH
+	knxVersion := goKNXVersion(t)
+	platform := "go-knx " + knxVersion + ", " + runtime.Version() + ", " + runtime.GOOS + "/" + runtime.GOARCH
 	SetBuildMeta("", "", "", "")
 	r := run(t, "version")
 	want(t, r, 0, "knxctl dev (commit ", "built unknown, "+platform+")")
@@ -21,7 +37,7 @@ func TestVersion(t *testing.T) {
 	SetBuildMeta("0.10.0", "v0.10.0", "1802d0f9afe8642d1e278120b76fcdfac967cb9e", "2026-11-07T10:00:00Z")
 	defer SetBuildMeta("", "", "", "")
 	line := "knxctl 0.10.0 (tag v0.10.0, commit 1802d0f9afe8642d1e278120b76fcdfac967cb9e, built 2026-11-07T10:00:00Z, " + platform + ")\n"
-	jsonLine := `{"name":"knxctl","version":"0.10.0","tag":"v0.10.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-07T10:00:00Z","go":"` +
+	jsonLine := `{"name":"knxctl","version":"0.10.0","tag":"v0.10.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-07T10:00:00Z","libraries":[{"name":"go-knx","version":"` + knxVersion + `"}],"go":"` +
 		runtime.Version() + `","platform":"` + runtime.GOOS + "/" + runtime.GOARCH + `"}` + "\n"
 	for _, c := range []struct {
 		args []string

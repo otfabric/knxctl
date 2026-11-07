@@ -273,11 +273,11 @@ func newVersionCmd(a *app) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "Print the version of knxctl",
+		Short: "Print the version of knxctl and go-knx",
 		Long: `Print one line: knxctl <version> (tag <tag>, commit <commit>, built <date>,
-<go version>, <os>/<arch>). The tag part is left out when the build has no
-tag. --json, or --format json, prints the same as one JSON object:
-{"name","version","tag","commit","built","go","platform"}.`,
+go-knx <version>, <go version>, <os>/<arch>). The tag part is left out when
+the build has no tag. --json, or --format json, prints the same as one JSON
+object: {"name","version","tag","commit","built","libraries","go","platform"}.`,
 		Example: "  knxctl version\n  knxctl version --json",
 		Args:    cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {

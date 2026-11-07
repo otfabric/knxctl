@@ -5,7 +5,7 @@ All notable changes are listed here; release notes are in
 
 ## v0.10.0 (2026-11-07)
 
-`version` prints the one-line format of every OT Fabric CLI; `version --json`
+`version` prints the one-line format of every OT Fabric CLI, go-knx included; `version --json`
 (or `--format json`) the matching JSON object, without the envelope. Shell
 completion of flag and argument values (format, priority, service families,
 datapoint types, features, objects, `.knxkeys` and `.json` files).
