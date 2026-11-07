@@ -3,7 +3,10 @@
 package cmd
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"runtime"
 	"strings"
 	"testing"
@@ -63,6 +66,24 @@ func TestVersion(t *testing.T) {
 	t.Setenv("KNXCTL_FORMAT", "json")
 	if r := run(t, "version"); r.out != jsonLine {
 		t.Fatalf("KNXCTL_FORMAT=json: %q", r.out)
+	}
+}
+
+// failWriter fails every write, as a closed stdout does.
+type failWriter struct{}
+
+func (failWriter) Write([]byte) (int, error) { return 0, errors.New("closed") }
+
+// A version line that cannot be written is an output failure.
+func TestVersionWriteError(t *testing.T) {
+	for _, args := range [][]string{{"version"}, {"version", "--json"}} {
+		var errOut bytes.Buffer
+		if code := Run(context.Background(), args, strings.NewReader(""), failWriter{}, &errOut); code != errs.ExitInternal {
+			t.Errorf("%q: exit %d, want %d\n%s", args, code, errs.ExitInternal, errOut.String())
+		}
+		if !strings.Contains(errOut.String(), "write output") {
+			t.Errorf("%q: stderr %q, want the write error", args, errOut.String())
+		}
 	}
 }
 
