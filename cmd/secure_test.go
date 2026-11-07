@@ -125,7 +125,7 @@ func freeBothPort(t *testing.T) string {
 }
 
 func TestServeSecure(t *testing.T) {
-	b := start(t, "serve", "--listen", freeBothPort(t), "--no-discovery", "--tunnels", "1.1.10,1.1.11", "--secure-user", "2:pw2:1.1.10", "--device-password", "dev", "--object", "1/2/3:1.001")
+	b := start(t, "serve", "--listen", freeBothPort(t), "--no-discovery", "--tunnels", "1.1.10,1.1.11", "--secure-user", "2:pw2:1.1.10", "--device-password", "dev", "--object", "1/2/3:1.001", "--secure-session-timeout", "90s")
 	b.waitErr(t, "serving on")
 	addr := regexp.MustCompile(`serving on (\S+)`).FindStringSubmatch(b.errOut.String())[1]
 	want(t, run(t, "group", "write", "1/2/3", "on", "--gateway", addr, "--user-id", "2", "--user-password", "pw2", "--device-password", "dev"), 0)
@@ -149,6 +149,8 @@ func TestServeSecure(t *testing.T) {
 		{"--secure-user", "2:pw€", "--device-password", "d"},
 		{"--secure-user", "2:pw", "--device-password", "d€"},
 		{"--keyring", kr, "--keyring-password", "kpw", "--keyring-host", "x"},
+		{"--secure-user", "2:pw:1.1.10", "--device-password", "d", "--secure-session-timeout", "0s"},
+		{"--secure-user", "2:pw:1.1.10", "--device-password", "d", "--secure-session-timeout", "-1s"},
 	} {
 		r := run(t, append([]string{"serve", "--listen", "127.0.0.1:0", "--no-discovery"}, args...)...)
 		if r.code != 3 {
@@ -172,6 +174,7 @@ func TestSecureUDP(t *testing.T) {
 // usable in tests.)
 func TestServeSecureRoutingFlags(t *testing.T) {
 	want(t, run(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--backbone-key", "000102030405060708090a0b0c0d0e0f"), 3, "needs --routing")
+	want(t, run(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--secure-session-timeout", "30s"), 3, "needs a secure server")
 	want(t, run(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--routing", "--backbone-key", "xyz"), 3, "--backbone-key")
 }
 

@@ -161,6 +161,8 @@ Routing joins the KNX IP multicast group (224.0.23.12:3671 by default) and
 sends routing indications with the source address `--source` (set it to an
 address of your line: without it the source is 0.0.0). Multicast loopback is
 on, so knxctl processes and simulators on the same host hear each other.
+Sends follow KNXnet/IP routing flow control: after a ROUTING_BUSY from a
+router knxctl pauses for the announced wait time before it sends again.
 
 ### Connecting to simulated environments with knxctl serve
 

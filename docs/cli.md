@@ -1058,28 +1058,29 @@ Examples:
   knxctl serve --listen 127.0.0.1:3671 --no-discovery --tunnels 1.1.10,1.1.11
 
 Flags:
-      --address string            Individual address of the server (default 15.15.0)
-      --backbone-key string       KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY)
-      --concurrent-busmonitor     Let busmonitor connections coexist with tunnels (simulators)
-      --config string             JSON configuration file (docs/serve.md)
-      --device-address string     Individual address of the --object device (default "1.1.1")
-      --device-password string    Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD)
-  -h, --help                      help for serve
-      --keyring string            Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)
-      --keyring-host string       Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --listen string             UDP address to listen on (default ":3671")
-      --multicast string          Multicast group of routing (default "224.0.23.12:3671")
-      --name string               Friendly name (default "knxctl serve")
-      --no-discovery              Do not join the multicast group for search requests
-      --no-tcp                    Do not accept KNXnet/IP over TCP
-      --object stringArray        Group object group[+group]:dpt[:flags][=value] (repeatable; flags default CRWU)
-      --programming-mode          Announce programming mode in DEVICE_INFO (search and description)
-      --routing                   Route telegrams over IP multicast too
-      --secure-user stringArray   KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)
-      --serial string             KNX serial number, 12 hex digits (default 00FA00000001)
-      --tool-key string           Secure the remote device management of the server's device with this tool key, 32 hex digits, or "keyring" for its tool key in --keyring (env KNXCTL_TOOL_KEY)
-      --tunnels strings           Tunnelling addresses, one per connection (default 15.15.250)
+      --address string                    Individual address of the server (default 15.15.0)
+      --backbone-key string               KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY)
+      --concurrent-busmonitor             Let busmonitor connections coexist with tunnels (simulators)
+      --config string                     JSON configuration file (docs/serve.md)
+      --device-address string             Individual address of the --object device (default "1.1.1")
+      --device-password string            Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD)
+  -h, --help                              help for serve
+      --keyring string                    Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)
+      --keyring-host string               Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)
+      --keyring-password string           Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
+      --listen string                     UDP address to listen on (default ":3671")
+      --multicast string                  Multicast group of routing (default "224.0.23.12:3671")
+      --name string                       Friendly name (default "knxctl serve")
+      --no-discovery                      Do not join the multicast group for search requests
+      --no-tcp                            Do not accept KNXnet/IP over TCP
+      --object stringArray                Group object group[+group]:dpt[:flags][=value] (repeatable; flags default CRWU)
+      --programming-mode                  Announce programming mode in DEVICE_INFO (search and description)
+      --routing                           Route telegrams over IP multicast too
+      --secure-session-timeout duration   End KNX IP Secure sessions idle for this long (default 1m0s)
+      --secure-user stringArray           KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)
+      --serial string                     KNX serial number, 12 hex digits (default 00FA00000001)
+      --tool-key string                   Secure the remote device management of the server's device with this tool key, 32 hex digits, or "keyring" for its tool key in --keyring (env KNXCTL_TOOL_KEY)
+      --tunnels strings                   Tunnelling addresses, one per connection (default 15.15.250)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")

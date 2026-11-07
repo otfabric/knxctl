@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/otfabric/go-knx"
 	"github.com/otfabric/go-knx/apdu"
@@ -94,6 +95,7 @@ func newServeCmd(a *app) *cobra.Command {
 	var sec secureFlags
 	var keyringHost, serial, multicast, toolKey string
 	var progMode bool
+	var sessionTimeout time.Duration
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run a simulated KNXnet/IP server with virtual group objects",
@@ -179,6 +181,15 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 			}
 			if secOpt != nil {
 				opts = append(opts, secOpt)
+			}
+			if cmd.Flags().Changed("secure-session-timeout") {
+				if secOpt == nil {
+					return errs.Invalid("--secure-session-timeout needs a secure server (--secure-user or --keyring)")
+				}
+				if sessionTimeout <= 0 {
+					return errs.Invalid("--secure-session-timeout: want a positive duration, got %v", sessionTimeout)
+				}
+				opts = append(opts, server.WithSecureSessionTimeout(sessionTimeout))
 			}
 			if routing {
 				key, latency, ok, err := sec.backbone()
@@ -276,6 +287,7 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 	f.BoolVar(&noTCP, "no-tcp", false, "Do not accept KNXnet/IP over TCP")
 	f.BoolVar(&concurrentBusmon, "concurrent-busmonitor", false, "Let busmonitor connections coexist with tunnels (simulators)")
 	f.StringArrayVar(&secureUsers, "secure-user", nil, "KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)")
+	f.DurationVar(&sessionTimeout, "secure-session-timeout", server.DefaultSecureSessionTimeout, "End KNX IP Secure sessions idle for this long")
 	f.StringVar(&sec.devicePassword, "device-password", envOr("KNXCTL_DEVICE_PASSWORD", ""), "Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD)")
 	f.StringVar(&sec.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)")
 	f.StringVar(&sec.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
