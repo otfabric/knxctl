@@ -6,6 +6,13 @@ Report vulnerabilities privately, not in public issues: email
 **security@otfabric.io**, or open a private advisory through GitHub's
 security advisories of otfabric/knxctl ("Report a vulnerability").
 
+## Supported Versions
+
+| Version | Supported |
+|---------|-----------|
+| v0.9.x (latest release) | Yes |
+| Older releases | No |
+
 ## Threat model
 
 KNX installations control lights, blinds, heating, ventilation, access
