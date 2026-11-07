@@ -23,6 +23,23 @@ knxctl dpt encode 9.001 21.5                                 # 0C33
 knxctl decode 061004200015040100001100bce0110a0a03010081     # a captured frame
 ```
 
+## Install
+
+```sh
+curl -fsSL https://get.otfabric.io/knxctl | sh
+```
+
+```powershell
+irm https://get.otfabric.io/knxctl.ps1 | iex
+```
+
+Linux (amd64, arm64, armv7), macOS (Intel, Apple silicon) and Windows (amd64, arm64). The installer verifies the release's SHA-256 checksum, installs per user without `sudo` (`~/.local/bin`, Windows `%LOCALAPPDATA%\OTFabric\bin`), and upgrades in place when run again. Pin a version with `OTF_VERSION=x.y.z`; for CI, containers and device images use `OTF_UNMANAGED_INSTALL=<dir>`; all options: [otfabric/install](https://github.com/otfabric/install#options). For offline machines, the archives and checksums are on [Releases](https://github.com/otfabric/knxctl/releases).
+
+From source (Go 1.26+): `go install github.com/otfabric/knxctl@latest`
+
+Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
+`knxctl completion zsh > "${fpath[1]}/_knxctl"`.
+
 ## Passive by default
 
 knxctl sends nothing onto the KNX network unless the command says so:
@@ -43,19 +60,6 @@ knxctl sends nothing onto the KNX network unless the command says so:
 
 Writing to group addresses switches real loads — lights, blinds, heating,
 access control. Try commands against `knxctl serve` first.
-
-## Install
-
-Binaries for Linux (amd64, arm64, armv7), macOS (amd64, arm64) and Windows
-(amd64, arm64) are attached to each
-[GitHub release](https://github.com/otfabric/knxctl/releases). From source:
-
-```sh
-go install github.com/otfabric/knxctl@latest
-```
-
-Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
-`knxctl completion zsh > "${fpath[1]}/_knxctl"`.
 
 ## Commands
 
