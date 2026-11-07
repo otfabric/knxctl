@@ -3,7 +3,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all build build-all test test-multicast coverage cover cross lint lint-ci fmt fmt-check vet vuln docs check install clean e2e coverage-pkg-check fuzz
+.PHONY: help all build build-all test test-multicast coverage cover cross lint lint-ci fmt fmt-check vet vuln docs check install clean e2e coverage-pkg-check fuzz docs-check
 
 help: ## This help
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -22,6 +22,8 @@ COVERAGE_MIN := 85
 # Per-package floor (TEST-012), from the coverage.out of `make coverage`.
 COVER_PKG_MIN := 85
 FUZZTIME ?= 10s
+# docsync release of docs-check (DOC-008).
+DOCSYNC_VERSION := v0.2.0
 
 GO_MOD_VERSION := $(shell sed -nE 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod | head -n1)
 GOFMT_CI = $(shell GOTOOLCHAIN=go$(GO_MOD_VERSION).0 go env GOROOT)/bin/gofmt
@@ -95,7 +97,11 @@ vuln: ## govulncheck
 docs: ## Regenerate docs/cli.md from the --help of every command
 	@scripts/gen-cli-doc.sh
 
-check: fmt-check lint lint-ci vet cross vuln test coverage coverage-pkg-check ## Everything CI checks
+check: fmt-check lint lint-ci vet cross vuln test coverage coverage-pkg-check docs-check ## Everything CI checks
+
+# The documents against the code (DOC-008): docsync, as docs-check.yml runs it.
+docs-check: ## Check that the documents agree with the code (docsync)
+	@go run github.com/otfabric/docsync@$(DOCSYNC_VERSION) check .
 
 e2e: ## Build the binary and run the e2e suite against it
 	@mkdir -p bin
