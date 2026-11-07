@@ -46,7 +46,7 @@ func TestVersionPrintsTheBuiltVersion(t *testing.T) {
 	if want == "" {
 		t.Fatal("KNXCTL_E2E_VERSION is not set; run make e2e")
 	}
-	if !strings.Contains(output, "knxctl") || !strings.Contains(output, want) {
+	if !strings.HasPrefix(output, "knxctl "+want+" (") || strings.Count(output, "\n") != 1 {
 		t.Fatalf("output does not name knxctl %s:\n%s", want, output)
 	}
 }

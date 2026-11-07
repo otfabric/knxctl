@@ -1,7 +1,7 @@
 # JSON output
 
 `--format json` (or `KNXCTL_FORMAT=json`; `KNXCTL_OUTPUT_FORMAT` is accepted too, `_FORMAT` wins) makes every command machine
-readable. Every document carries `"schemaVersion": "1.0"`; the major version
+readable. Every document but `version`'s (below) carries `"schemaVersion": "1.0"`; the major version
 changes only with an incompatible change. Fields may be added in minor
 versions: ignore fields you do not know. Diagnostics (`-v`, progress lines
 such as `listening via ...`) always go to stderr, never into the JSON.
@@ -20,8 +20,8 @@ Commands with one result write one indented document, the envelope:
 
 `command` is the command path (`discover`, `describe`, `tunnel connect`,
 `group write`, `group respond`, `group read`, `group answer`, `diagnose`,
-`dpt list`, `dpt describe`, `dpt encode`, `dpt decode`, `decode`,
-`version`). The `result` per command:
+`dpt list`, `dpt describe`, `dpt encode`, `dpt decode`, `decode`). The
+`result` per command:
 
 | Command | `result` fields |
 |---------|-----------------|
@@ -36,7 +36,6 @@ Commands with one result write one indented document, the envelope:
 | `dpt describe` | a datapoint type |
 | `dpt encode`, `dpt decode` | `dpt`, `data` (hex), `small`, `value`, `text` (formatted with unit) |
 | `decode` | `layer` (`KNXnet/IP` or `cEMI`), `service`, `length`, `fields` (header fields of the service: `channel`, `sequence`, `status`, `control`, `data`, `discovery`, `connectionType`, `layer`, `address`, `device`, `body`, `cemiError`), `cemi` (below) |
-| `version` | `version`, `tag`, `commit`, `buildDate`, `goKnx`, `go`, `platform` |
 
 A **device** (discover, describe, decoded search and description
 responses): `endpoint`, `name`, `individualAddress`, `medium`, `serial`,
@@ -58,6 +57,20 @@ A decoded **cEMI** frame: `messageCode`, `source`, `destination`,
 **Values.** Numbers, booleans and strings decode to JSON numbers, booleans
 and strings; enumerations to `{"value": 1, "name": "comfort"}`; times,
 dates and colours to their text form (`"Mon 12:30:00"`, `"#FF8000"`).
+
+## version
+
+`knxctl version --json`, or `version` with `--format json`, writes one line,
+the same object as every OT Fabric CLI, without the envelope. The keys come
+in this order and are always present; `tag` is `""` for a build without a
+tag, unknown values are `"dev"` (version) or `"unknown"`:
+
+```json
+{"name":"knxctl","version":"0.10.0","tag":"v0.10.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-07T10:00:00Z","go":"go1.26.3","platform":"linux/amd64"}
+```
+
+The text form is one line too:
+`knxctl 0.10.0 (tag v0.10.0, commit 1802d0f9…, built 2026-11-07T10:00:00Z, go1.26.3, linux/amd64)`.
 
 ## Streams
 

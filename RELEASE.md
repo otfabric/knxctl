@@ -6,6 +6,35 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.10.0
+
+**Date:** 2026-11-07
+**Previous release:** v0.9.0
+
+## Summary
+
+`knxctl version` prints the one-line format shared by every OT Fabric CLI, and `version --json` (or `--format json`) the matching JSON object. Shell completion now covers the values of every flag and argument with a fixed set, in bash, zsh, fish and PowerShell.
+
+**Upgrade notes:** the output of `version` changed (see Changed). It no longer lists the go-knx version, and its JSON is no longer wrapped in the `schemaVersion`/`command`/`result` envelope; scripts that read `version --format json` must read the new keys. No other command, exit code or JSON document changed.
+
+## Changes
+
+### Added
+
+- `version --json`: one line, `{"name","version","tag","commit","built","go","platform"}` in that order, every key present (`"dev"`/`"unknown"` when unknown, `"tag": ""` without a tag). `--format json` and `KNXCTL_FORMAT=json` print the same.
+- Shell completion of values: `--format`, `--priority` (low, normal, urgent, system), `--service` (service families), `--dpt`/`-t` (every datapoint type, with its name), the datapoint of `dpt describe`/`encode`/`decode`, the feature of `tunnel feature get`/`set`, the object of `property read`/`write`. `--keyring` and `keyring show` complete `.knxkeys` files and `serve --config` `.json` files; every other flag and argument (addresses, numbers, hex) completes no file names.
+
+### Changed
+
+- `version` prints one line, `knxctl <version> (tag <tag>, commit <commit>, built <date>, <go>, <os>/<arch>)`, without the leading `v` and with the full commit; the tag part is left out without a tag. A development build (`go build`, `go run`) reports `dev` and the commit with `-dirty` from the toolchain's VCS stamp; `go install …@vX.Y.Z` reports X.Y.Z. It was three lines: `knxctl v0.9.0 (commit)`, the go-knx version, the Go version and platform.
+- `make build` injects the version without the leading `v` and the full commit.
+
+### Documentation
+
+- docs/json-output.md: the `version` object. README: what shell completion completes.
+
+---
+
 ## v0.9.0
 
 **Date:** 2026-11-07

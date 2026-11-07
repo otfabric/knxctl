@@ -3,6 +3,13 @@
 All notable changes are listed here; release notes are in
 [RELEASE.md](RELEASE.md).
 
+## v0.10.0 (2026-11-07)
+
+`version` prints the one-line format of every OT Fabric CLI; `version --json`
+(or `--format json`) the matching JSON object, without the envelope. Shell
+completion of flag and argument values (format, priority, service families,
+datapoint types, features, objects, `.knxkeys` and `.json` files).
+
 ## v0.9.0 (2026-11-07)
 
 go-knx v0.8.1: routing flow control, KNX IP Secure session timers, 30 more
