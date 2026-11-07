@@ -123,7 +123,10 @@ or value exits 3 before anything is opened.
 - Device management of the server's own device (`--address`): local
   device management connections and remote device management (property
   read, write and description) through a tunnel, with `--tool-key`
-  secured by KNX Data Secure tool access.
+  secured by KNX Data Secure tool access. An answer in a transport
+  connection that is not acknowledged within 3 s, or that the client
+  refuses with T_NAK, is repeated at most three times; then the device
+  ends the connection.
 - Routing indications (`--routing`), sent at most 50 per second. Outgoing
   indications are queued and paced; after a ROUTING_BUSY from another
   router the server pauses for its wait time and then slows down.
