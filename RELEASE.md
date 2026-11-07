@@ -6,6 +6,31 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.10.1
+
+**Date:** 2026-11-07
+**Previous release:** v0.10.0
+
+## Summary
+
+Built on go-knx v0.9.0 (was v0.8.1). The own device of `knxctl serve` now repeats an answer in a transport connection that the client misses, as the KNX transport layer does: before, the client's next request got the missed answer's sequence number and the client timed out.
+
+## Changes
+
+### Changed
+
+- go-knx v0.9.0, through v0.8.2. See go-knx's release notes.
+
+### Fixed
+
+- `serve`: the server's own device (`--address`) answered a request in a transport connection once. When the client missed the answer, the device answered the client's next request with the same sequence number, which the client took for a repetition, and the client timed out. The device now repeats an answer that is not acknowledged within 3 s, or that the client refuses with T_NAK, at most three times, then ends the connection. Calimero tools showed it now and then on a connected property read.
+
+### Documentation
+
+- docs/serve.md: the repetition.
+
+---
+
 ## v0.10.0
 
 **Date:** 2026-11-07
