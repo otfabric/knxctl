@@ -37,8 +37,25 @@ Linux (amd64, arm64, armv7), macOS (Intel, Apple silicon) and Windows (amd64, ar
 
 From source (Go 1.26+): `go install github.com/otfabric/knxctl@latest`
 
-Shell completion: `knxctl completion bash|zsh|fish|powershell`, for example
-`knxctl completion zsh > "${fpath[1]}/_knxctl"`.
+### Shell completion
+
+```sh
+# bash (needs the bash-completion package)
+mkdir -p ~/.local/share/bash-completion/completions
+knxctl completion bash > ~/.local/share/bash-completion/completions/knxctl
+
+# zsh: a directory on your fpath, then restart the shell
+mkdir -p ~/.zsh/completions && knxctl completion zsh > ~/.zsh/completions/_knxctl
+# and once in ~/.zshrc:  fpath=(~/.zsh/completions $fpath); autoload -U compinit && compinit
+
+# fish
+mkdir -p ~/.config/fish/completions && knxctl completion fish > ~/.config/fish/completions/knxctl.fish
+```
+
+```powershell
+# PowerShell: add this line to your profile ($PROFILE)
+knxctl completion powershell | Out-String | Invoke-Expression
+```
 
 ## Passive by default
 
