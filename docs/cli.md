@@ -1094,13 +1094,21 @@ Global Flags:
 ## knxctl version
 
 ```text
-Print the version of knxctl and go-knx
+Print one line: knxctl <version> (tag <tag>, commit <commit>, built <date>,
+go-knx <version>, <go version>, <os>/<arch>). The tag part is left out when
+the build has no tag. --json, or --format json, prints the same as one JSON
+object: {"name","version","tag","commit","built","libraries","go","platform"}.
 
 Usage:
   knxctl version [flags]
 
+Examples:
+  knxctl version
+  knxctl version --json
+
 Flags:
   -h, --help   help for version
+      --json   Print the version as one JSON object (same as --format json)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")

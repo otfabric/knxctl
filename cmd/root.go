@@ -11,23 +11,20 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"runtime"
-	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/otfabric/go-knx"
+	"github.com/otfabric/knxctl/internal/buildinfo"
 	"github.com/otfabric/knxctl/internal/errs"
 	"github.com/otfabric/knxctl/internal/output"
 	"github.com/spf13/cobra"
 )
 
-var buildMeta struct{ version, tag, commit, buildDate string }
-
 // SetBuildMeta records link-time metadata (main's -X flags).
 func SetBuildMeta(version, tag, commit, buildDate string) {
-	buildMeta.version, buildMeta.tag, buildMeta.commit, buildMeta.buildDate = version, tag, commit, buildDate
+	buildinfo.Set(version, tag, commit, buildDate)
 }
 
 // app is the state of one invocation.
@@ -142,9 +139,6 @@ go to stderr. Exit codes: docs/exitcodes.md.`,
 	}
 	pf := root.PersistentFlags()
 	pf.String("format", formatDefault(), "Output format: text, json or table (env KNXCTL_FORMAT)")
-	_ = root.RegisterFlagCompletionFunc("format", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		return []string{"text\thuman-readable", "json\tversioned JSON", "table\taligned columns"}, cobra.ShellCompDirectiveNoFileComp
-	})
 	pf.DurationVar(&a.timeout, "timeout", 5*time.Second, "Timeout of each request (search window, connect, read)")
 	pf.StringVarP(&a.iface, "interface", "i", "", "Network interface for multicast and the announced address")
 	pf.StringVar(&a.local, "local-addr", "", "Local address to bind (IP or IP:port)")
@@ -152,6 +146,7 @@ go to stderr. Exit codes: docs/exitcodes.md.`,
 	pf.BoolVarP(&a.quiet, "quiet", "q", false, "Log nothing to stderr")
 	root.AddCommand(newDiscoverCmd(a), newDescribeCmd(a), newTunnelCmd(a), newGroupCmd(a), newMonitorCmd(a), newRoutingCmd(a),
 		newDPTCmd(a), newDecodeCmd(a), newDiagnoseCmd(a), newBusmonitorCmd(a), newPropertyCmd(a), newKeyringCmd(a), newServeCmd(a), newVersionCmd(a), newCompletionCmd())
+	registerCompletions(root)
 	return root
 }
 
@@ -274,50 +269,31 @@ func Execute() int {
 	return Run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
 }
 
-type versionResult struct {
-	Version   string `json:"version"`
-	Tag       string `json:"tag,omitempty"`
-	Commit    string `json:"commit,omitempty"`
-	BuildDate string `json:"buildDate,omitempty"`
-	GoKNX     string `json:"goKnx"`
-	Go        string `json:"go"`
-	Platform  string `json:"platform"`
-}
-
-func (v versionResult) Text() string {
-	s := "knxctl " + v.Version
-	if v.Commit != "" {
-		s += " (" + v.Commit + ")"
-	}
-	return s + "\ngo-knx " + v.GoKNX + "\n" + v.Go + " " + v.Platform
-}
-
 func newVersionCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var asJSON bool
+	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version of knxctl and go-knx",
-		Args:  cobra.NoArgs,
+		Long: `Print one line: knxctl <version> (tag <tag>, commit <commit>, built <date>,
+go-knx <version>, <go version>, <os>/<arch>). The tag part is left out when
+the build has no tag. --json, or --format json, prints the same as one JSON
+object: {"name","version","tag","commit","built","libraries","go","platform"}.`,
+		Example: "  knxctl version\n  knxctl version --json",
+		Args:    cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
-			v := versionResult{Version: buildMeta.version, Tag: buildMeta.tag, Commit: buildMeta.commit, BuildDate: buildMeta.buildDate,
-				GoKNX: "(unknown)", Go: runtime.Version(), Platform: runtime.GOOS + "/" + runtime.GOARCH}
-			if v.Version == "" {
-				v.Version = "dev"
+			i := buildinfo.Get("knxctl")
+			line := i.Text()
+			if asJSON || a.format == output.JSON {
+				line = i.JSON()
 			}
-			if info, ok := debug.ReadBuildInfo(); ok {
-				// "go install github.com/otfabric/knxctl@vX.Y.Z" sets no
-				// link-time version; the module version says it.
-				if v.Version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
-					v.Version = info.Main.Version
-				}
-				for _, d := range info.Deps {
-					if d.Path == "github.com/otfabric/go-knx" {
-						v.GoKNX = d.Version
-					}
-				}
+			if _, err := io.WriteString(a.out, line+"\n"); err != nil {
+				return errs.New(errs.KindOutput, errs.CodeOutputFailed, "write output: %w", err)
 			}
-			return a.emit("version", v)
+			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "Print the version as one JSON object (same as --format json)")
+	return cmd
 }
 
 func newCompletionCmd() *cobra.Command {

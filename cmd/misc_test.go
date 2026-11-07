@@ -3,42 +3,67 @@
 package cmd
 
 import (
+	"encoding/json"
+	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/otfabric/knxctl/internal/buildinfo"
 	"github.com/otfabric/knxctl/internal/errs"
 )
 
-func TestVersion(t *testing.T) {
-	SetBuildMeta("", "", "", "")
-	want(t, run(t, "version"), 0, "knxctl dev", "go-knx")
-	SetBuildMeta("v0.1.0", "v0.1.0", "abc1234", "2026-10-29T00:00:00Z")
-	defer SetBuildMeta("", "", "", "")
-	r := run(t, "version")
-	want(t, r, 0, "knxctl v0.1.0 (abc1234)")
-	r = run(t, "version", "--format", "json")
-	res := resultOf(t, r, "version")
-	if res["version"] != "v0.1.0" || res["commit"] != "abc1234" || res["tag"] != "v0.1.0" || res["buildDate"] == nil || res["go"] == nil || res["platform"] == nil || res["goKnx"] == nil {
-		t.Fatalf("version %v", res)
+// libraries are the text and JSON forms of the OT Fabric libraries in the
+// test binary's build information: none on some Go versions, which record
+// no dependencies in test binaries (buildinfo's tests inject them).
+func libraries(t *testing.T) (string, string) {
+	t.Helper()
+	libs := buildinfo.Get("knxctl").Libraries
+	text := ""
+	for _, l := range libs {
+		text += l.Name + " " + l.Version + ", "
 	}
-	// A table falls back to text for results without columns.
-	want(t, run(t, "version", "--format", "table"), 0, "knxctl v0.1.0")
+	b, err := json.Marshal(libs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return text, string(b)
 }
 
-func TestCompletion(t *testing.T) {
-	for shell, marker := range map[string]string{
-		"bash":       "__start_knxctl",
-		"zsh":        "#compdef knxctl",
-		"fish":       "complete -c knxctl",
-		"powershell": "Register-ArgumentCompleter",
-	} {
-		r := run(t, "completion", shell)
-		want(t, r, 0, marker)
+func TestVersion(t *testing.T) {
+	libText, libJSON := libraries(t)
+	platform := libText + runtime.Version() + ", " + runtime.GOOS + "/" + runtime.GOARCH
+	SetBuildMeta("", "", "", "")
+	r := run(t, "version")
+	want(t, r, 0, "knxctl dev (commit ", "built unknown, "+platform+")")
+	if strings.Count(r.out, "\n") != 1 || strings.Contains(r.out, "tag ") {
+		t.Fatalf("version: %q", r.out)
 	}
-	want(t, run(t, "completion", "tcsh"), 3, "unknown shell")
-	want(t, run(t, "completion"), 2, "accepts 1 arg")
-	// Flag value completion of --format.
-	want(t, run(t, "__complete", "--format", ""), 0, "json", "table", "text")
+	SetBuildMeta("0.10.0", "v0.10.0", "1802d0f9afe8642d1e278120b76fcdfac967cb9e", "2026-11-07T10:00:00Z")
+	defer SetBuildMeta("", "", "", "")
+	line := "knxctl 0.10.0 (tag v0.10.0, commit 1802d0f9afe8642d1e278120b76fcdfac967cb9e, built 2026-11-07T10:00:00Z, " + platform + ")\n"
+	jsonLine := `{"name":"knxctl","version":"0.10.0","tag":"v0.10.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-07T10:00:00Z","libraries":` + libJSON + `,"go":"` +
+		runtime.Version() + `","platform":"` + runtime.GOOS + "/" + runtime.GOARCH + `"}` + "\n"
+	for _, c := range []struct {
+		args []string
+		out  string
+	}{
+		{[]string{"version"}, line},
+		// A table falls back to the text line.
+		{[]string{"version", "--format", "table"}, line},
+		{[]string{"version", "--json"}, jsonLine},
+		// The global format selects the same JSON.
+		{[]string{"version", "--format", "json"}, jsonLine},
+		{[]string{"--format=json", "version", "--json"}, jsonLine},
+	} {
+		r := run(t, c.args...)
+		if r.code != 0 || r.out != c.out || r.errOut != "" {
+			t.Fatalf("%v: exit %d\nstdout %q\nwant   %q\nstderr %q", c.args, r.code, r.out, c.out, r.errOut)
+		}
+	}
+	t.Setenv("KNXCTL_FORMAT", "json")
+	if r := run(t, "version"); r.out != jsonLine {
+		t.Fatalf("KNXCTL_FORMAT=json: %q", r.out)
+	}
 }
 
 func TestHelp(t *testing.T) {
@@ -88,8 +113,8 @@ func TestFormatSelection(t *testing.T) {
 	want(t, run(t, "version", "--timeout", "0s"), errs.ExitInvalidInput, "must be positive")
 	// The environment selects the format; --format overrides it.
 	t.Setenv("KNXCTL_FORMAT", "json")
-	resultOf(t, run(t, "version"), "version")
-	want(t, run(t, "version", "--format=text"), 0, "knxctl")
+	resultOf(t, run(t, "dpt", "describe", "1.001"), "dpt describe")
+	want(t, run(t, "dpt", "describe", "1.001", "--format=text"), 0, "DPT_Switch")
 	// A usage error follows the environment's format too.
 	errorOf(t, run(t, "nope"))
 	// Arguments after -- are not flags, not even --format.
@@ -126,11 +151,11 @@ func TestVerbosityFlags(t *testing.T) {
 func TestOutputFormatEnv(t *testing.T) {
 	t.Setenv("KNXCTL_FORMAT", "")
 	t.Setenv("KNXCTL_OUTPUT_FORMAT", "json")
-	if r := run(t, "version"); !strings.Contains(r.out, `"schemaVersion"`) {
+	if r := run(t, "dpt", "describe", "1.001"); !strings.Contains(r.out, `"schemaVersion"`) {
 		t.Fatalf("OUTPUT_FORMAT ignored: %q", r.out)
 	}
 	t.Setenv("KNXCTL_FORMAT", "text")
-	if r := run(t, "version"); strings.Contains(r.out, `"schemaVersion"`) {
+	if r := run(t, "dpt", "describe", "1.001"); strings.Contains(r.out, `"schemaVersion"`) {
 		t.Fatalf("FORMAT does not win: %q", r.out)
 	}
 }

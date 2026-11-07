@@ -13,9 +13,11 @@ export GOWORK := off
 APP_NAME    := knxctl
 BIN_DIR     := bin
 RELEASE_DIR := release
-VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+# VERSION and TAG are injected only when HEAD is exactly on a tag; any other
+# build reports "dev" (and its commit).
 TAG         ?= $(shell git describe --tags --exact-match 2>/dev/null)
-COMMIT      ?= $(shell git rev-parse --short HEAD 2>/dev/null)
+VERSION     ?= $(patsubst v%,%,$(TAG))
+COMMIT      ?= $(shell git rev-parse HEAD 2>/dev/null)
 BUILD_DATE  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS     := -ldflags "-s -w -X 'main.version=$(VERSION)' -X 'main.tag=$(TAG)' -X 'main.commit=$(COMMIT)' -X 'main.buildDate=$(BUILD_DATE)'"
 COVERAGE_MIN := 85
@@ -40,7 +42,7 @@ build: ## Build ./bin/knxctl
 build-all: ## Build for every release platform into ./release
 	@mkdir -p $(RELEASE_DIR)
 	@for p in $(PLATFORMS); do os=$${p%/*}; cpu=$${p#*/}; ext=; [ $$os = windows ] && ext=.exe; \
-		name=$(APP_NAME)-$(VERSION)-$$os-$$cpu; [ $$cpu = arm ] && name=$(APP_NAME)-$(VERSION)-$$os-armv7; \
+		name=$(APP_NAME)-$(or $(VERSION),dev)-$$os-$$cpu; [ $$cpu = arm ] && name=$(APP_NAME)-$(or $(VERSION),dev)-$$os-armv7; \
 		echo "build $$name$$ext"; GOOS=$$os GOARCH=$$cpu GOARM=7 go build $(LDFLAGS) -o $(RELEASE_DIR)/$$name$$ext . || exit 1; done
 
 test: ## Run the tests with the race detector (routing tests skip without multicast loopback)
@@ -106,7 +108,7 @@ docs-check: ## Check that the documents agree with the code (docsync)
 e2e: ## Build the binary and run the e2e suite against it
 	@mkdir -p bin
 	@go build $(LDFLAGS) -o bin/knxctl .
-	@KNXCTL_E2E_BIN=$(CURDIR)/bin/knxctl KNXCTL_E2E_VERSION=$(VERSION) go test -count=1 -tags=e2e ./e2e/...
+	@KNXCTL_E2E_BIN=$(CURDIR)/bin/knxctl KNXCTL_E2E_VERSION=$(or $(VERSION),dev) go test -count=1 -tags=e2e ./e2e/...
 
 install: build ## Install into /usr/local/bin
 	@install -m 0755 $(BIN_DIR)/$(APP_NAME) /usr/local/bin/$(APP_NAME)

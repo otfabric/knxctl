@@ -39,6 +39,8 @@ From source (Go 1.26+): `go install github.com/otfabric/knxctl@latest`
 
 ### Shell completion
 
+Commands and flags complete, and so do the values of `--format`, `--priority`, `--service`, `--dpt` and the datapoint, feature and object arguments; `--keyring` and `--config` complete `.knxkeys` and `.json` files.
+
 ```sh
 # bash (needs the bash-completion package)
 mkdir -p ~/.local/share/bash-completion/completions
