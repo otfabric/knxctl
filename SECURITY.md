@@ -10,7 +10,7 @@ security advisories of otfabric/knxctl ("Report a vulnerability").
 
 | Version | Supported |
 |---------|-----------|
-| v0.9.x (latest release) | Yes |
+| Latest release | Yes |
 | Older releases | No |
 
 ## Threat model
