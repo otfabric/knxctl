@@ -1,0 +1,9 @@
+{
+  "clis": [
+    {
+      "name": "knxctl",
+      "manifest": "./cmd",
+      "exit_codes": "internal/errs"
+    }
+  ]
+}
