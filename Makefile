@@ -23,7 +23,7 @@ COVERAGE_MIN := 85
 COVER_PKG_MIN := 85
 FUZZTIME ?= 10s
 # docsync release of docs-check (DOC-008).
-DOCSYNC_VERSION := v0.3.0
+DOCSYNC_VERSION := v0.3.1
 
 GO_MOD_VERSION := $(shell sed -nE 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod | head -n1)
 GOFMT_CI = $(shell GOTOOLCHAIN=go$(GO_MOD_VERSION).0 go env GOROOT)/bin/gofmt

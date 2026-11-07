@@ -28,7 +28,7 @@ jobs:
       go-versions: '["1.26", "1.27"]'
       test-exclude-regex: "/example(s)?($|/)"
       coverpkg: ./...
-      policy-version: v1.4.1
+      policy-version: v1.4.2
     secrets: inherit
 
   # The whole suite on Linux, natively on amd64 and arm64, with
