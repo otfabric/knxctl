@@ -6,6 +6,25 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.11.0
+
+**Date:** 2026-11-08
+**Previous release:** v0.10.1
+
+## Summary
+
+Built on go-knx v0.10.0 (was v0.9.0), whose codecs, discovery, tunnelling server and management responder were checked against recorded KNX traffic: a residential KNX TP1 installation (1.15 million telegrams) and sessions with an ABB IP-Router IPR/S and IPS/S2.1.
+
+## Changes
+
+### Changed
+
+- `discover`: a gateway whose search or description response carries a malformed optional block (TUNNELLING_INFO, SECURED_SERVICE_FAMILIES) is listed; before, the whole response was dropped, so an ABB IPR/S did not show up.
+- `serve`: busmonitor clients see the repeat flag of repeated routed indications.
+- `serve`: the server's own device closes a management transport connection that has been idle for 6 s with T_Disconnect, as the recorded devices do; before, it dropped it silently.
+
+---
+
 ## v0.10.1
 
 **Date:** 2026-11-07
