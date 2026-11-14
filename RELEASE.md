@@ -6,6 +6,26 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.12.0
+
+**Date:** 2026-11-14
+**Previous release:** v0.11.0
+
+## Summary
+
+Built on go-knx v0.11.0 (was v0.10.0), which tightens KNX IP Secure and KNX Data Secure session handling and adds input limits.
+
+## Changes
+
+### Changed
+
+- `serve` with secure users: a session that has not authenticated ends after 10 s and gives way to a new session when all are taken. A secure tunnel sends only with its user's address. When the tunnelling channels are exhausted, a connect is refused with `E_NO_MORE_CONNECTIONS`.
+- Keyring files are read with limits on size, nesting and element counts. Values out of range are refused.
+- Secure routing collects timer sync answers for the whole sync window and uses the newest.
+- Tunnel connections over TCP end when a write is not taken within the request timeout.
+
+---
+
 ## v0.11.0
 
 **Date:** 2026-11-08
