@@ -22,3 +22,14 @@
    docs/exitcodes.md for new error codes.
 8. Add an SPDX header (`// SPDX-License-Identifier: MIT`) to new Go files.
 9. Commit messages: imperative subject, a body that says why.
+
+## When CI runs
+
+| Event | Workflow | What runs |
+|---|---|---|
+| Pull request | `pr.yml` | `docs.yml` (docsync, otfabric-policy) always; `ci.yml` unless every changed file is documentation; then `OT Fabric Required Checks` |
+| Push to a branch | none | nothing; dispatch `ci.yml` to test a branch without a pull request |
+| Push to `main` | `docs.yml` | the light checks; the merged commit was tested as the pull request's merge commit |
+| Release | `release.yml` | the release workflow tests the release commit again |
+
+Documentation means an added or modified `*.md` file outside `.github/`, `testdata/` and `vendor/`, other than `AGENTS.md` and `CLAUDE.md`. A deleted or renamed document, or any other file, runs everything. `OT Fabric Required Checks` fails unless every job that applies succeeded; its summary lists them.
