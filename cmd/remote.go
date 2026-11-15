@@ -27,7 +27,7 @@ type remoteFlags struct {
 func (r *remoteFlags) add(f *pflag.FlagSet) {
 	f.StringVar(&r.device, "device", "", "Individual address of a device on the KNX network: remote device management (A_PropertyValue_*) through a tunnel instead of the server's local device management")
 	f.BoolVar(&r.connected, "connected", false, "With --device: access the device in a transport connection (default connectionless)")
-	f.StringVar(&r.toolKey, "tool-key", envOr("KNXCTL_TOOL_KEY", ""), "With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any) (env KNXCTL_TOOL_KEY)")
+	secretFlag(f, &r.toolKey, "tool-key", "KNXCTL_TOOL_KEY", "With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any)")
 }
 
 // remote is an open remote management session.

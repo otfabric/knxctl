@@ -149,3 +149,33 @@ func TestServeInvalid(t *testing.T) {
 	r = run(t, "serve", "--listen", s.addr, "--no-discovery")
 	want(t, r, errs.ExitTransport, "listen")
 }
+
+// With --config and --keyring, the keyring host gives the tunnels and the
+// address that the file leaves out; a file that names them keeps them.
+func TestServeConfigWithKeyring(t *testing.T) {
+	kr := testKeyring(t)
+	devices := writeFile(t, "site.json", `{"devices": [{"name": "d", "address": "1.1.2", "objects": [{"name": "l", "dpt": "1.001", "groups": ["2/0/1"]}]}]}`)
+	b, addr := serve(t, "--config", devices, "--keyring", kr, "--keyring-password", "kpw")
+	res := resultOf(t, run(t, "tunnel", "connect", addr, "--keyring", kr, "--keyring-password", "kpw", "--format", "json"), "tunnel connect")
+	if res["individualAddress"] != tunnelAddrs[0].String() {
+		t.Fatalf("tunnel %v", res)
+	}
+	res = resultOf(t, run(t, "describe", addr, "--format", "json"), "describe")
+	if d := res["device"].(map[string]any); d["individualAddress"] != "1.1.0" {
+		t.Fatalf("device %v", d)
+	}
+	want(t, run(t, "group", "write", "2/0/1", "on", "-g", addr, "--keyring", kr, "--keyring-password", "kpw"), 0)
+	want(t, b.stop(t), 0, "2/0/1")
+
+	named := writeFile(t, "named.json", `{"address": "1.1.5", "tunnels": ["1.1.10", "1.1.11"], "devices": []}`)
+	b, addr = serve(t, "--config", named, "--keyring", kr, "--keyring-password", "kpw")
+	res = resultOf(t, run(t, "describe", addr, "--format", "json"), "describe")
+	if d := res["device"].(map[string]any); d["individualAddress"] != "1.1.5" {
+		t.Fatalf("device %v", d)
+	}
+	want(t, b.stop(t), 0)
+	// The file's tunnels are the server's: the keyring's users need theirs
+	// (1.1.10 and 1.1.11, in either order).
+	other := writeFile(t, "other.json", `{"tunnels": ["1.1.20"], "devices": []}`)
+	want(t, run(t, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--config", other, "--keyring", kr, "--keyring-password", "kpw"), 3, "is not a tunnelling address")
+}

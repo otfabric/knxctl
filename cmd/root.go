@@ -101,7 +101,9 @@ diagnose and the dpt and decode commands never send telegrams onto the KNX
 network (discover sends one search request; describe and diagnose talk only to
 the KNXnet/IP server). Commands that send telegrams are explicit: group write,
 group respond, group answer and group read (a read is a telegram the devices
-answer).
+answer), and property read and property write with --device (remote device
+management of that device). property write without --device and tunnel
+feature set change the configuration of the KNXnet/IP server.
 
 A KNXnet/IP server is reached by tunnelling (--gateway host[:port], env
 KNXCTL_GATEWAY) or the KNX IP network by routing (--routing, multicast
@@ -123,6 +125,9 @@ go to stderr. Exit codes: docs/exitcodes.md.`,
 			a.started = true
 			if a.timeout <= 0 {
 				return errs.Invalid("--timeout %v: must be positive", a.timeout)
+			}
+			if err := resolveSecrets(cmd.Flags()); err != nil {
+				return err
 			}
 			level := slog.LevelWarn
 			switch {

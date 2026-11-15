@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/otfabric/go-knx"
+	"github.com/otfabric/go-knx/apdu"
 	"github.com/otfabric/go-knx/server"
 	"github.com/otfabric/knxctl/internal/errs"
 )
@@ -198,8 +200,10 @@ func TestInterruptedIsNotATimeout(t *testing.T) {
 	s := startServer(t, server.WithIndividualAddress(hostIA))
 	// 1.1.77 does not exist: the command waits for its answer.
 	b := start(t, "property", "read", s.addr, "device", "11", "--device", "1.1.77", "--timeout", "20s", "--format", "json", "-v")
-	eventually(t, "the tunnel", func() bool { return len(s.Connections()) > 0 })
-	time.Sleep(200 * time.Millisecond)
+	// The read has reached the network: the command waits for 1.1.77.
+	eventually(t, "the property read to 1.1.77", func() bool {
+		return s.sentTo(knx.MustParseIndividualAddress("1.1.77"), apdu.PropertyValueReadService)
+	})
 	r := b.stop(t)
 	want(t, r, 130)
 	if e := errorOf(t, r); e["kind"] != "interrupted" || e["code"] != "canceled" {

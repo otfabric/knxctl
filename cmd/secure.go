@@ -16,8 +16,8 @@ import (
 )
 
 // secureFlags select KNX IP Secure and KNX Data Secure: a keyring, or the
-// passwords and keys given directly. Secrets are read from the
-// environment by default so that they stay out of shell histories and
+// passwords and keys given directly. Secrets are read from files or the
+// environment (secretFlag) so that they stay out of shell histories and
 // process lists; knxctl never prints them.
 type secureFlags struct {
 	keyringPath     string
@@ -33,19 +33,19 @@ type secureFlags struct {
 
 func (s *secureFlags) add(f *pflag.FlagSet) {
 	f.StringVar(&s.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)")
-	f.StringVar(&s.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
-	f.IntVar(&s.userID, "user-id", 0, "KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)")
-	f.StringVar(&s.userPassword, "user-password", envOr("KNXCTL_USER_PASSWORD", ""), "Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)")
-	f.StringVar(&s.devicePassword, "device-password", envOr("KNXCTL_DEVICE_PASSWORD", ""), "Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)")
-	f.StringVar(&s.backboneKey, "backbone-key", envOr("KNXCTL_BACKBONE_KEY", ""), "KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)")
+	secretFlag(f, &s.keyringPassword, "keyring-password", "KNXCTL_KEYRING_PASSWORD", "Password of the keyring")
+	intVarP(f, &s.userID, "user-id", "", 0, "KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)")
+	secretFlag(f, &s.userPassword, "user-password", "KNXCTL_USER_PASSWORD", "Password of the secure tunnelling user")
+	secretFlag(f, &s.devicePassword, "device-password", "KNXCTL_DEVICE_PASSWORD", "Device authentication password of the secure server, to verify it")
+	secretFlag(f, &s.backboneKey, "backbone-key", "KNXCTL_BACKBONE_KEY", "KNX IP Secure routing backbone key, 32 hex digits")
 	f.BoolVar(&s.udp, "udp", false, "Run a KNX IP Secure session over UDP instead of TCP")
 }
 
 // addRouting registers the flags of secure routing and Data Secure only.
 func (s *secureFlags) addRouting(f *pflag.FlagSet) {
 	f.StringVar(&s.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "ETS keyring (.knxkeys) with the backbone key and the Data Secure group keys (env KNXCTL_KEYRING)")
-	f.StringVar(&s.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
-	f.StringVar(&s.backboneKey, "backbone-key", envOr("KNXCTL_BACKBONE_KEY", ""), "KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)")
+	secretFlag(f, &s.keyringPassword, "keyring-password", "KNXCTL_KEYRING_PASSWORD", "Password of the keyring")
+	secretFlag(f, &s.backboneKey, "backbone-key", "KNXCTL_BACKBONE_KEY", "KNX IP Secure routing backbone key, 32 hex digits")
 }
 
 // keyring loads the keyring once; nil without --keyring.

@@ -13,7 +13,9 @@ diagnose and the dpt and decode commands never send telegrams onto the KNX
 network (discover sends one search request; describe and diagnose talk only to
 the KNXnet/IP server). Commands that send telegrams are explicit: group write,
 group respond, group answer and group read (a read is a telegram the devices
-answer).
+answer), and property read and property write with --device (remote device
+management of that device). property write without --device and tunnel
+feature set change the configuration of the KNXnet/IP server.
 
 A KNXnet/IP server is reached by tunnelling (--gateway host[:port], env
 KNXCTL_GATEWAY) or the KNX IP network by routing (--routing, multicast
@@ -164,19 +166,23 @@ Examples:
   knxctl tunnel connect 192.168.1.10 --hold 2m --heartbeat 30s
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-      --heartbeat duration        Heartbeat interval while held (default 1m0s)
-  -h, --help                      help for connect
-      --hold duration             Keep the connection this long before disconnecting
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --nat                       Announce the route back endpoint (through NAT)
-      --tcp                       Connect over TCP (KNXnet/IP core v2)
-      --tunnel-address string     Request this tunnelling address (tunnelling v2 servers)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+      --heartbeat duration           Heartbeat interval while held (default 1m0s)
+  -h, --help                         help for connect
+      --hold duration                Keep the connection this long before disconnecting
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --nat                          Announce the route back endpoint (through NAT)
+      --tcp                          Connect over TCP (KNXnet/IP core v2)
+      --tunnel-address string        Request this tunnelling address (tunnelling v2 servers)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -226,14 +232,18 @@ Examples:
   knxctl tunnel feature get 192.168.1.10 bus-connection --udp
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -h, --help                      help for get
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -h, --help                         help for get
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -258,14 +268,18 @@ Examples:
   knxctl tunnel feature set 192.168.1.10 info-service 01
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -h, --help                      help for set
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -h, --help                         help for set
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -322,25 +336,29 @@ Examples:
   knxctl group write 1/2/5 --raw 0C33 --routing --source 1.1.250
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -t, --dpt string                Datapoint type of the value (9.001)
-  -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
-  -h, --help                      help for write
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --multicast string          Routing multicast group (default "224.0.23.12:3671")
-      --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
-      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --raw string                Send these octets (hexadecimal, 1..254) instead of a value
-      --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
-      --small                     With --raw: send one octet 00..3F in the APCI (6-bit value)
-      --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
-      --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
-      --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -t, --dpt string                   Datapoint type of the value (9.001)
+  -g, --gateway string               KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
+  -h, --help                         help for write
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --multicast string             Routing multicast group (default "224.0.23.12:3671")
+      --nat                          Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string              Priority of sent telegrams: low, normal, urgent or system (default "low")
+      --raw string                   Send these octets (hexadecimal, 1..254) instead of a value
+      --routing                      Use KNXnet/IP routing (IP multicast) instead of a tunnel
+      --small                        With --raw: send one octet 00..3F in the APCI (6-bit value)
+      --source string                Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                          Tunnel over TCP (KNXnet/IP core v2) instead of UDP
+      --tunnel-address string        Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -366,25 +384,29 @@ Examples:
   knxctl group respond 1/2/4 21.5 --dpt 9.001 --gateway 192.168.1.10
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -t, --dpt string                Datapoint type of the value (9.001)
-  -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
-  -h, --help                      help for respond
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --multicast string          Routing multicast group (default "224.0.23.12:3671")
-      --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
-      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --raw string                Send these octets (hexadecimal, 1..254) instead of a value
-      --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
-      --small                     With --raw: send one octet 00..3F in the APCI (6-bit value)
-      --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
-      --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
-      --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -t, --dpt string                   Datapoint type of the value (9.001)
+  -g, --gateway string               KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
+  -h, --help                         help for respond
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --multicast string             Routing multicast group (default "224.0.23.12:3671")
+      --nat                          Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string              Priority of sent telegrams: low, normal, urgent or system (default "low")
+      --raw string                   Send these octets (hexadecimal, 1..254) instead of a value
+      --routing                      Use KNXnet/IP routing (IP multicast) instead of a tunnel
+      --small                        With --raw: send one octet 00..3F in the APCI (6-bit value)
+      --source string                Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                          Tunnel over TCP (KNXnet/IP core v2) instead of UDP
+      --tunnel-address string        Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -412,24 +434,28 @@ Examples:
   knxctl group read 1/2/4 --all 2s --gateway 192.168.1.10 --format json
 
 Flags:
-      --all duration              Collect every response during this window (at most 1000)
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -t, --dpt string                Datapoint type to decode the value with (9.001)
-  -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
-  -h, --help                      help for read
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --multicast string          Routing multicast group (default "224.0.23.12:3671")
-      --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
-      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
-      --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
-      --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
-      --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --all duration                 Collect every response during this window (at most 1000)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -t, --dpt string                   Datapoint type to decode the value with (9.001)
+  -g, --gateway string               KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
+  -h, --help                         help for read
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --multicast string             Routing multicast group (default "224.0.23.12:3671")
+      --nat                          Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string              Priority of sent telegrams: low, normal, urgent or system (default "low")
+      --routing                      Use KNXnet/IP routing (IP multicast) instead of a tunnel
+      --source string                Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                          Tunnel over TCP (KNXnet/IP core v2) instead of UDP
+      --tunnel-address string        Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -455,27 +481,31 @@ Examples:
   knxctl group answer 1/2/4 21.5 --dpt 9.001 --gateway 192.168.1.10 --count 1
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many answers (0: no limit)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -t, --dpt string                Datapoint type of the value
-      --duration duration         Stop after this time (0: no limit)
-  -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
-  -h, --help                      help for answer
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --multicast string          Routing multicast group (default "224.0.23.12:3671")
-      --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
-      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --raw string                Answer with these octets (hexadecimal, 1..254)
-      --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
-      --small                     With --raw: one octet 00..3F in the APCI
-      --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
-      --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
-      --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+  -n, --count int                    Stop after this many answers (0: no limit)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -t, --dpt string                   Datapoint type of the value
+      --duration duration            Stop after this time (0: no limit)
+  -g, --gateway string               KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
+  -h, --help                         help for answer
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --multicast string             Routing multicast group (default "224.0.23.12:3671")
+      --nat                          Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string              Priority of sent telegrams: low, normal, urgent or system (default "low")
+      --raw string                   Answer with these octets (hexadecimal, 1..254)
+      --routing                      Use KNXnet/IP routing (IP multicast) instead of a tunnel
+      --small                        With --raw: one octet 00..3F in the APCI
+      --source string                Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                          Tunnel over TCP (KNXnet/IP core v2) instead of UDP
+      --tunnel-address string        Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -499,26 +529,30 @@ Examples:
   knxctl group listen --routing --count 10 --format json
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many telegrams (0: no limit)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -t, --dpt string                Decode every group with this datapoint type
-      --duration duration         Stop after this time (0: no limit)
-  -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
-  -h, --help                      help for listen
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --map stringArray           Decode a group with a datapoint type: group=dpt (repeatable)
-      --multicast string          Routing multicast group (default "224.0.23.12:3671")
-      --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
-      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
-      --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
-      --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
-      --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+  -n, --count int                    Stop after this many telegrams (0: no limit)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -t, --dpt string                   Decode every group with this datapoint type
+      --duration duration            Stop after this time (0: no limit)
+  -g, --gateway string               KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
+  -h, --help                         help for listen
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --map stringArray              Decode a group with a datapoint type: group=dpt (repeatable)
+      --multicast string             Routing multicast group (default "224.0.23.12:3671")
+      --nat                          Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string              Priority of sent telegrams: low, normal, urgent or system (default "low")
+      --routing                      Use KNXnet/IP routing (IP multicast) instead of a tunnel
+      --source string                Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                          Tunnel over TCP (KNXnet/IP core v2) instead of UDP
+      --tunnel-address string        Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -543,26 +577,30 @@ Examples:
   knxctl monitor --routing --interface eth0
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many telegrams (0: no limit)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -t, --dpt string                Decode every group with this datapoint type
-      --duration duration         Stop after this time (0: no limit)
-  -g, --gateway string            KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
-  -h, --help                      help for monitor
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --map stringArray           Decode a group with a datapoint type: group=dpt (repeatable)
-      --multicast string          Routing multicast group (default "224.0.23.12:3671")
-      --nat                       Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
-      --priority string           Priority of sent telegrams: low, normal, urgent or system (default "low")
-      --routing                   Use KNXnet/IP routing (IP multicast) instead of a tunnel
-      --source string             Source individual address of sent telegrams (routing; a tunnel uses the server's)
-      --tcp                       Tunnel over TCP (KNXnet/IP core v2) instead of UDP
-      --tunnel-address string     Request this tunnelling address (extended CRI, tunnelling v2 servers)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+  -n, --count int                    Stop after this many telegrams (0: no limit)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -t, --dpt string                   Decode every group with this datapoint type
+      --duration duration            Stop after this time (0: no limit)
+  -g, --gateway string               KNXnet/IP server to tunnel through, host[:port] (env KNXCTL_GATEWAY)
+  -h, --help                         help for monitor
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --map stringArray              Decode a group with a datapoint type: group=dpt (repeatable)
+      --multicast string             Routing multicast group (default "224.0.23.12:3671")
+      --nat                          Tunnel through NAT: announce the route back endpoint 0.0.0.0:0
+      --priority string              Priority of sent telegrams: low, normal, urgent or system (default "low")
+      --routing                      Use KNXnet/IP routing (IP multicast) instead of a tunnel
+      --source string                Source individual address of sent telegrams (routing; a tunnel uses the server's)
+      --tcp                          Tunnel over TCP (KNXnet/IP core v2) instead of UDP
+      --tunnel-address string        Request this tunnelling address (extended CRI, tunnelling v2 servers)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -610,15 +648,17 @@ Examples:
   knxctl routing monitor --interface eth0 --map 1/2/4=9.001
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many telegrams (0: no limit)
-  -t, --dpt string                Decode every group with this datapoint type
-      --duration duration         Stop after this time (0: no limit)
-  -h, --help                      help for monitor
-      --keyring string            ETS keyring (.knxkeys) with the backbone key and the Data Secure group keys (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --map stringArray           Decode a group with a datapoint type: group=dpt (repeatable)
-      --multicast string          Routing multicast group (default "224.0.23.12:3671")
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+  -n, --count int                    Stop after this many telegrams (0: no limit)
+  -t, --dpt string                   Decode every group with this datapoint type
+      --duration duration            Stop after this time (0: no limit)
+  -h, --help                         help for monitor
+      --keyring string               ETS keyring (.knxkeys) with the backbone key and the Data Secure group keys (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --map stringArray              Decode a group with a datapoint type: group=dpt (repeatable)
+      --multicast string             Routing multicast group (default "224.0.23.12:3671")
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -645,16 +685,20 @@ Examples:
   knxctl diagnose 192.168.1.10 --format json
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -h, --help                      help for diagnose
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --nat                       Announce route back endpoints (through NAT)
-      --tcp                       Tunnel over TCP (KNXnet/IP core v2)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -h, --help                         help for diagnose
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --nat                          Announce route back endpoints (through NAT)
+      --tcp                          Tunnel over TCP (KNXnet/IP core v2)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -833,18 +877,22 @@ Examples:
   knxctl busmonitor 192.168.1.10 --count 20 --format json
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-  -n, --count int                 Stop after this many frames (0: no limit)
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-      --duration duration         Stop after this time (0: no limit)
-  -h, --help                      help for busmonitor
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --nat                       Announce the route back endpoint (through NAT)
-      --tcp                       Connect over TCP
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+  -n, --count int                    Stop after this many frames (0: no limit)
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+      --duration duration            Stop after this time (0: no limit)
+  -h, --help                         help for busmonitor
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --nat                          Announce the route back endpoint (through NAT)
+      --tcp                          Connect over TCP
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -864,8 +912,8 @@ Usage:
   knxctl property [command]
 
 Available Commands:
-  read        Read a property (local M_PropRead, or A_PropertyValue_Read of a device with --device)
-  write       Write a property (local M_PropWrite, or A_PropertyValue_Write of a device with --device)
+  read        Read a property (local M_PropRead, or A_PropertyValue_Read of a device with --device, which transmits)
+  write       Write a property (local M_PropWrite, or A_PropertyValue_Write of a device with --device, which transmits)
 
 Flags:
   -h, --help   help for property
@@ -903,25 +951,30 @@ Examples:
   knxctl property read 192.168.1.10 knxnetip 76 --count 30   # friendly name
   knxctl property read 192.168.1.10 knxnetip 53 --start 0     # number of tunnelling addresses
   knxctl property read 192.168.1.10 device 11 --device 1.1.5  # serial number of device 1.1.5
-  knxctl property read 192.168.1.10 device 11 --device 1.1.5 --keyring p.knxkeys --keyring-password ...   # secured with its tool key
+  knxctl property read 192.168.1.10 device 11 --device 1.1.5 --keyring p.knxkeys --keyring-password-file p.pw   # secured with its tool key
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --connected                 With --device: access the device in a transport connection (default connectionless)
-      --count uint8               Number of elements (1..15) (default 1)
-      --device string             Individual address of a device on the KNX network: remote device management (A_PropertyValue_*) through a tunnel instead of the server's local device management
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -h, --help                      help for read
-      --instance uint8            Object instance (default 1)
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --nat                       Announce the route back endpoint (through NAT)
-      --start uint16              First element (0: the number of elements) (default 1)
-      --tcp                       Connect over TCP
-      --tool-key string           With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any) (env KNXCTL_TOOL_KEY)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --connected                    With --device: access the device in a transport connection (default connectionless)
+      --count uint8                  Number of elements (1..15) (default 1)
+      --device string                Individual address of a device on the KNX network: remote device management (A_PropertyValue_*) through a tunnel instead of the server's local device management
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -h, --help                         help for read
+      --instance uint8               Object instance (default 1)
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --nat                          Announce the route back endpoint (through NAT)
+      --start uint16                 First element (0: the number of elements) (default 1)
+      --tcp                          Connect over TCP
+      --tool-key string              With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any) (env KNXCTL_TOOL_KEY); deprecated as a flag: use --tool-key-file or the variable
+      --tool-key-file file           Read --tool-key from file, without its trailing newline (env KNXCTL_TOOL_KEY_FILE)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -955,22 +1008,27 @@ Examples:
   knxctl property write 192.168.1.10 knxnetip 76 6B6E78 --count 3 --device 1.1.0 --connected
 
 Flags:
-      --backbone-key string       KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY)
-      --connected                 With --device: access the device in a transport connection (default connectionless)
-      --count uint8               Number of elements (1..15) (default 1)
-      --device string             Individual address of a device on the KNX network: remote device management (A_PropertyValue_*) through a tunnel instead of the server's local device management
-      --device-password string    Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD)
-  -h, --help                      help for write
-      --instance uint8            Object instance (default 1)
-      --keyring string            ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --nat                       Announce the route back endpoint (through NAT)
-      --start uint16              First element (default 1)
-      --tcp                       Connect over TCP
-      --tool-key string           With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any) (env KNXCTL_TOOL_KEY)
-      --udp                       Run a KNX IP Secure session over UDP instead of TCP
-      --user-id int               KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
-      --user-password string      Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD)
+      --backbone-key string          KNX IP Secure routing backbone key, 32 hex digits (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file       Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
+      --connected                    With --device: access the device in a transport connection (default connectionless)
+      --count uint8                  Number of elements (1..15) (default 1)
+      --device string                Individual address of a device on the KNX network: remote device management (A_PropertyValue_*) through a tunnel instead of the server's local device management
+      --device-password string       Device authentication password of the secure server, to verify it (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file    Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
+  -h, --help                         help for write
+      --instance uint8               Object instance (default 1)
+      --keyring string               ETS keyring (.knxkeys) with the secure tunnelling users, Data Secure group keys and backbone key (env KNXCTL_KEYRING)
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --nat                          Announce the route back endpoint (through NAT)
+      --start uint16                 First element (default 1)
+      --tcp                          Connect over TCP
+      --tool-key string              With --device: the device's tool key, 32 hex digits, to secure the access with KNX Data Secure (default: the device's tool key in --keyring, if any) (env KNXCTL_TOOL_KEY); deprecated as a flag: use --tool-key-file or the variable
+      --tool-key-file file           Read --tool-key from file, without its trailing newline (env KNXCTL_TOOL_KEY_FILE)
+      --udp                          Run a KNX IP Secure session over UDP instead of TCP
+      --user-id int                  KNX IP Secure tunnelling user (2..127; with --keyring it selects the user's interface)
+      --user-password string         Password of the secure tunnelling user (env KNXCTL_USER_PASSWORD); deprecated as a flag: use --user-password-file or the variable
+      --user-password-file file      Read --user-password from file, without its trailing newline (env KNXCTL_USER_PASSWORD_FILE)
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -1020,9 +1078,10 @@ Examples:
   KNXCTL_KEYRING_PASSWORD=... knxctl keyring show project.knxkeys
 
 Flags:
-  -h, --help                      help for show
-      --keyring-password string   Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
-      --secrets                   Show keys and passwords
+  -h, --help                         help for show
+      --keyring-password string      Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file   Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
+      --secrets                      Show keys and passwords
 
 Global Flags:
       --format string       Output format: text, json or table (env KNXCTL_FORMAT) (default "text")
@@ -1040,8 +1099,10 @@ Run a KNXnet/IP server (discovery, description, tunnelling, optionally
 routing) with a virtual KNX network behind it: telegrams of one tunnelling
 client reach the other clients and the virtual group objects, which store
 written values and answer reads according to their flags. Every telegram is
-printed. This is a simulator for development and tests; it does not emulate a
-physical KNX line. The server's own device (--address) answers local device
+printed, apart from the server: when stdout does not keep up, 1024 records
+wait and the telegrams beyond them are dropped and counted (the dropped field
+of the next record, and a warning at the end). This is a simulator for
+development and tests; it does not emulate a physical KNX line. The server's own device (--address) answers local device
 management and remote device management (property read, write and description)
 through a tunnel; with --tool-key only secured with that tool key (KNX Data
 Secure tool access).
@@ -1059,15 +1120,18 @@ Examples:
 
 Flags:
       --address string                    Individual address of the server (default 15.15.0)
-      --backbone-key string               KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY)
+      --backbone-key string               KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY); deprecated as a flag: use --backbone-key-file or the variable
+      --backbone-key-file file            Read --backbone-key from file, without its trailing newline (env KNXCTL_BACKBONE_KEY_FILE)
       --concurrent-busmonitor             Let busmonitor connections coexist with tunnels (simulators)
       --config string                     JSON configuration file (docs/serve.md)
       --device-address string             Individual address of the --object device (default "1.1.1")
-      --device-password string            Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD)
+      --device-password string            Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD); deprecated as a flag: use --device-password-file or the variable
+      --device-password-file file         Read --device-password from file, without its trailing newline (env KNXCTL_DEVICE_PASSWORD_FILE)
   -h, --help                              help for serve
       --keyring string                    Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)
       --keyring-host string               Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)
-      --keyring-password string           Password of the keyring (env KNXCTL_KEYRING_PASSWORD)
+      --keyring-password string           Password of the keyring (env KNXCTL_KEYRING_PASSWORD); deprecated as a flag: use --keyring-password-file or the variable
+      --keyring-password-file file        Read --keyring-password from file, without its trailing newline (env KNXCTL_KEYRING_PASSWORD_FILE)
       --listen string                     UDP address to listen on (default ":3671")
       --multicast string                  Multicast group of routing (default "224.0.23.12:3671")
       --name string                       Friendly name (default "knxctl serve")
@@ -1077,9 +1141,11 @@ Flags:
       --programming-mode                  Announce programming mode in DEVICE_INFO (search and description)
       --routing                           Route telegrams over IP multicast too
       --secure-session-timeout duration   End KNX IP Secure sessions idle for this long (default 1m0s)
-      --secure-user stringArray           KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)
+      --secure-user stringArray           KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure); a password on the command line is deprecated: use --secure-users-file
+      --secure-users-file file            Read secure tunnelling users from file, one id:password[:tunnel address] per line; empty lines and # comments are skipped (env KNXCTL_SECURE_USERS_FILE)
       --serial string                     KNX serial number, 12 hex digits (default 00FA00000001)
-      --tool-key string                   Secure the remote device management of the server's device with this tool key, 32 hex digits, or "keyring" for its tool key in --keyring (env KNXCTL_TOOL_KEY)
+      --tool-key string                   Secure the remote device management of the server's device with this tool key, 32 hex digits, or "keyring" for its tool key in --keyring (env KNXCTL_TOOL_KEY); deprecated as a flag: use --tool-key-file or the variable
+      --tool-key-file file                Read --tool-key from file, without its trailing newline (env KNXCTL_TOOL_KEY_FILE)
       --tunnels strings                   Tunnelling addresses, one per connection (default 15.15.250)
 
 Global Flags:

@@ -212,7 +212,7 @@ knxctl busmonitor 192.168.1.10 --count 20       # raw TP1 frames, decoded
 knxctl property read 192.168.1.10 device 11     # serial number
 knxctl property read 192.168.1.10 knxnetip 76 --count 15 --tcp   # friendly name
 knxctl property read 192.168.1.10 device 11 --device 1.1.5        # serial number of device 1.1.5
-knxctl property read 192.168.1.10 device 11 --device 1.1.5 --connected --keyring site.knxkeys --keyring-password ...
+knxctl property read 192.168.1.10 device 11 --device 1.1.5 --connected --keyring site.knxkeys --keyring-password-file site.pw
 ```
 
 With `--device`, the request goes through a tunnel to that device on the KNX
@@ -235,14 +235,14 @@ KNX Data Secure (secured group communication), with the keys of an ETS
 keyring or given directly:
 
 ```bash
-export KNXCTL_KEYRING=project.knxkeys KNXCTL_KEYRING_PASSWORD=...   # secrets from the environment
+export KNXCTL_KEYRING=project.knxkeys KNXCTL_KEYRING_PASSWORD_FILE=project.pw   # the password from a file
 knxctl keyring show project.knxkeys                     # users, groups, devices (no secrets)
 knxctl group read 1/2/4 --gateway 192.168.1.10          # secure tunnel as the keyring's first user, Data Secure groups decrypted
 knxctl group write 1/2/3 on --gateway 192.168.1.10 --user-id 3
 knxctl monitor --routing                                # secure routing with the keyring's backbone key
-KNXCTL_USER_PASSWORD=... knxctl tunnel connect 192.168.1.10 --user-id 2 --device-password ...
+knxctl tunnel connect 192.168.1.10 --user-id 2 --user-password-file user2.pw --device-password-file device.pw
 knxctl serve --keyring project.knxkeys --keyring-host 1.1.0   # a secure simulator: the host's users
-knxctl serve --secure-user 2:secret:1.1.10 --device-password trustme
+knxctl serve --secure-users-file users.txt --device-password-file device.pw   # users.txt: 2:secret:1.1.10, one per line
 knxctl group write 1/2/3 on --gateway 192.168.1.10 --user-id 2 --udp   # the secure session over UDP
 knxctl serve --routing --keyring project.knxkeys --keyring-host 1.1.0  # secure routing with the keyring's backbone key
 ```
@@ -285,16 +285,19 @@ host[:port]` (env `KNXCTL_GATEWAY`; port 3671 by default), `--routing`,
 
 ## Configuration
 
-knxctl has no configuration file. Two environment variables set defaults:
+knxctl has no configuration file. Environment variables set defaults:
 
 | Variable | |
 |----------|-|
 | `KNXCTL_FORMAT` | Default `--format` (`json` for scripts); `KNXCTL_OUTPUT_FORMAT` is accepted too, `KNXCTL_FORMAT` wins |
 | `KNXCTL_GATEWAY` | Default `--gateway`, so that `knxctl group read 1/2/4` needs no flag |
-| `KNXCTL_KEYRING`, `KNXCTL_KEYRING_PASSWORD` | Default `--keyring` and its password |
-| `KNXCTL_USER_PASSWORD`, `KNXCTL_DEVICE_PASSWORD`, `KNXCTL_BACKBONE_KEY` | Secure tunnelling and routing secrets without a keyring |
+| `KNXCTL_KEYRING` | Default `--keyring` |
+| `KNXCTL_KEYRING_PASSWORD`, `KNXCTL_USER_PASSWORD`, `KNXCTL_DEVICE_PASSWORD`, `KNXCTL_BACKBONE_KEY`, `KNXCTL_TOOL_KEY` | The secrets: the keyring's password, and the secure tunnelling, routing and tool keys without a keyring |
+| the same names with `_FILE` (`KNXCTL_KEYRING_PASSWORD_FILE`, ...) | A file holding the secret, as the `--...-file` flags read it |
+| `KNXCTL_SECURE_USERS_FILE` | Default `--secure-users-file` of `serve` |
 
-Flags given on the command line win.
+Flags given on the command line win; a secret and its file are not given
+together ([SECURITY.md](SECURITY.md#secrets)).
 
 ## Output
 
@@ -332,10 +335,12 @@ are stable: [docs/exitcodes.md](docs/exitcodes.md).
 
 ## Security
 
-knxctl never prints keys or passwords (`keyring show --secrets` excepted)
-and reads them from the environment by default; avoid the flags on shared
-hosts, where command lines are visible to other users. See
-[SECURITY.md](SECURITY.md).
+knxctl never prints keys or passwords (`keyring show --secrets` excepted),
+not in help output either. It reads them from files (`--keyring-password-file`,
+`--user-password-file`, `--device-password-file`, `--backbone-key-file`,
+`--tool-key-file`, `serve --secure-users-file`) or the environment; the
+secret flags themselves are deprecated, because command lines are visible
+to other users of a host. See [SECURITY.md](SECURITY.md#secrets).
 
 ## Documentation
 

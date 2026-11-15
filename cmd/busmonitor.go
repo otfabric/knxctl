@@ -147,7 +147,7 @@ another is connected.`,
 	cmd.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (through NAT)")
 	cmd.Flags().BoolVar(&tcp, "tcp", false, "Connect over TCP")
 	sec.add(cmd.Flags())
-	cmd.Flags().IntVarP(&count, "count", "n", 0, "Stop after this many frames (0: no limit)")
+	intVarP(cmd.Flags(), &count, "count", "n", 0, "Stop after this many frames (0: no limit)")
 	cmd.Flags().DurationVar(&duration, "duration", 0, "Stop after this time (0: no limit)")
 	return cmd
 }

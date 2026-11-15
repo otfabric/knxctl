@@ -194,13 +194,17 @@ func TestChaosNoisePeer(t *testing.T) {
 
 // acceptor is a peer that accepts tunnelling and device management
 // connections, acknowledges every request and answers nothing else; with
-// flood, it then sends n group responses (and garbage cEMI) to the client.
+// flood, it sends n group responses (and garbage cEMI) to the client once
+// the client has sent its first TUNNELLING_REQUEST, so the client is
+// listening (floodNow starts it for a client that sends none).
 type acceptor struct {
 	mu        sync.Mutex
 	flood     int
 	busmon    bool
 	confirm   bool // confirm the client's L_Data.req like a real gateway
 	seq       uint8
+	data      netip.AddrPort // data endpoint of the last connection
+	flooded   bool           // the last connection has had its flood
 	connected atomic.Int64
 }
 
@@ -216,14 +220,11 @@ func (a *acceptor) handle(p *hostilePeer, from netip.AddrPort, m knxnetip.Messag
 		if !data.IsValid() || data.Addr().IsUnspecified() {
 			data = from
 		}
+		a.mu.Lock()
+		a.data, a.flooded = data, false
+		a.mu.Unlock()
 		p.send(from, &knxnetip.ConnectResponse{Channel: 7, Status: knxnetip.StatusNoError,
 			Data: knxnetip.NewHPAI(netip.MustParseAddrPort(p.addr)), CRD: crd})
-		a.mu.Lock()
-		n, busmon := a.flood, a.busmon
-		a.mu.Unlock()
-		if n > 0 {
-			go a.floodClient(p, data, n, busmon)
-		}
 	case *knxnetip.ConnectionStateRequest:
 		p.send(from, &knxnetip.ConnectionStateResponse{Channel: m.Channel, Status: knxnetip.StatusNoError})
 	case *knxnetip.TunnellingRequest:
@@ -239,6 +240,7 @@ func (a *acceptor) handle(p *hostilePeer, from netip.AddrPort, m knxnetip.Messag
 				}
 			}
 		}
+		go a.floodNow(p)
 	case *knxnetip.DeviceConfigurationRequest:
 		p.send(from, &knxnetip.DeviceConfigurationAck{Channel: m.Channel, Seq: m.Seq, Status: knxnetip.StatusNoError})
 	case *knxnetip.TunnellingFeature:
@@ -248,11 +250,22 @@ func (a *acceptor) handle(p *hostilePeer, from netip.AddrPort, m knxnetip.Messag
 	}
 }
 
+// floodNow sends the flood to the client of the last connection, once
+// per connection.
+func (a *acceptor) floodNow(p *hostilePeer) {
+	a.mu.Lock()
+	n, busmon, to, done := a.flood, a.busmon, a.data, a.flooded
+	a.flooded = true
+	a.mu.Unlock()
+	if n > 0 && !done && to.IsValid() {
+		a.floodClient(p, to, n, busmon)
+	}
+}
+
 // floodClient sends n telegrams to the client: group responses to 1/2/4
 // from changing sources (L_Data.ind, or L_Busmon.ind), with garbage cEMI
 // frames between them.
 func (a *acceptor) floodClient(p *hostilePeer, to netip.AddrPort, n int, busmon bool) {
-	time.Sleep(50 * time.Millisecond) // let the client finish connecting
 	g := knx.MustParseGroupAddress("1/2/4")
 	tpdu, _ := apdu.GroupValueResponse(apdu.GroupValue{Data: []byte{0x0C, 0x33}})
 	for i := range n {
@@ -330,36 +343,40 @@ func TestChaosSilentAfterConnect(t *testing.T) {
 // A server that floods the client with telegrams after connecting.
 func TestChaosFloodAfterConnect(t *testing.T) {
 	t.Parallel()
-	a := &acceptor{flood: 2000}
+	a := &acceptor{flood: 2000, confirm: true}
 	p := startHostile(t, a.handle)
 
-	// group read --all keeps at most maxReadResponses; whatever the
-	// socket buffers let through, the result is one JSON document.
+	// group read --all keeps at most maxReadResponses; the flood follows
+	// the read, and whatever the socket buffers let through, the result
+	// is one JSON document with responses.
 	r := within(t, 10*time.Second, "group", "read", "1/2/4", "--all", "1s", "-g", p.addr, "--timeout", "2s", "--format", "json")
-	switch r.code {
-	case 0:
-		res := resultOf(t, r, "group read")
-		if n := len(res["responses"].([]any)); n < 1 || n > maxReadResponses {
-			t.Fatalf("%d responses", n)
-		}
-	case 5: // every datagram of the flood lost (an overloaded runner)
-	default:
-		t.Fatalf("exit %d\n%s%s", r.code, r.out, r.errOut)
+	want(t, r, 0)
+	res := resultOf(t, r, "group read")
+	if n := len(res["responses"].([]any)); n < 1 || n > maxReadResponses {
+		t.Fatalf("%d responses", n)
 	}
 
-	// Streams stop at --count, garbage cEMI among the telegrams.
-	r = within(t, 10*time.Second, "monitor", "-g", p.addr, "--count", "25", "--duration", "5s", "--timeout", "2s", "--format", "json")
-	want(t, r, 0)
-	if lines := jsonLines(t, r.out); len(lines) > 25 {
-		t.Fatalf("%d records for --count 25", len(lines))
-	}
-	a.mu.Lock()
-	a.busmon = true
-	a.mu.Unlock()
-	r = within(t, 10*time.Second, "busmonitor", p.addr, "--count", "25", "--duration", "5s", "--timeout", "2s", "--format", "json")
-	want(t, r, 0)
-	if lines := jsonLines(t, r.out); len(lines) > 25 {
-		t.Fatalf("%d records for --count 25", len(lines))
+	// Streams stop at --count, garbage cEMI among the telegrams. They send
+	// nothing after connecting: the flood starts once they listen.
+	for _, c := range []struct {
+		busmon bool
+		ready  string
+		args   []string
+	}{
+		{false, "listening via", []string{"monitor", "-g", p.addr}},
+		{true, "busmonitor on", []string{"busmonitor", p.addr}},
+	} {
+		a.mu.Lock()
+		a.busmon = c.busmon
+		a.mu.Unlock()
+		b := start(t, append(c.args, "--count", "25", "--duration", "5s", "--timeout", "2s", "--format", "json")...)
+		b.waitErr(t, c.ready)
+		go a.floodNow(p)
+		r := b.wait(t)
+		want(t, r, 0)
+		if lines := jsonLines(t, r.out); len(lines) < 1 || len(lines) > 25 {
+			t.Fatalf("%v: %d records for --count 25", c.args, len(lines))
+		}
 	}
 }
 

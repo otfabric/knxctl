@@ -107,7 +107,7 @@ group: use it on test installations and simulators.`,
 	cmd.Flags().StringVarP(&dptID, "dpt", "t", "", "Datapoint type of the value")
 	cmd.Flags().StringVar(&raw, "raw", "", "Answer with these octets (hexadecimal, 1..254)")
 	cmd.Flags().BoolVar(&small, "small", false, "With --raw: one octet 00..3F in the APCI")
-	cmd.Flags().IntVarP(&count, "count", "n", 0, "Stop after this many answers (0: no limit)")
+	intVarP(cmd.Flags(), &count, "count", "n", 0, "Stop after this many answers (0: no limit)")
 	cmd.Flags().DurationVar(&duration, "duration", 0, "Stop after this time (0: no limit)")
 	return cmd
 }

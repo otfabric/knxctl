@@ -40,7 +40,8 @@ func (d decodedFrame) Text() string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "%s %s (%d octets)", d.Layer, d.Service, d.Length)
 	for k, v := range d.Fields {
-		fmt.Fprintf(&sb, "\n  %s: %v", k, v)
+		// A device record holds the peer's friendly name.
+		fmt.Fprintf(&sb, "\n  %s: %s", k, termSafe(fmt.Sprint(v)))
 	}
 	if c := d.CEMI; c != nil {
 		fmt.Fprintf(&sb, "\n  cEMI %s", c.Code)

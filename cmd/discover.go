@@ -145,7 +145,8 @@ func (d discoverResult) Headers() []string {
 func (d discoverResult) Rows() [][]string {
 	rows := make([][]string, len(d.Devices))
 	for i, r := range d.Devices {
-		rows[i] = []string{r.Endpoint, r.Name, r.Address, r.Medium, r.Serial, servicesString(r.Services)}
+		// The name comes from the peer, byte for byte.
+		rows[i] = []string{r.Endpoint, termSafe(r.Name), r.Address, r.Medium, r.Serial, servicesString(r.Services)}
 	}
 	return rows
 }
@@ -204,7 +205,7 @@ does not; use --unicast or describe instead.`,
 	cmd.Flags().BoolVar(&extended, "extended", false, "Send SEARCH_REQUEST_EXTENDED (KNXnet/IP core v2)")
 	cmd.Flags().StringVar(&unicast, "unicast", "", "Directed search of one server, host[:port]")
 	cmd.Flags().BoolVar(&nat, "nat", false, "Announce the route back endpoint (directed search through NAT)")
-	cmd.Flags().IntVar(&repeat, "repeat", 1, "Send the search 1..3 times, one second apart")
+	intVarP(cmd.Flags(), &repeat, "repeat", "", 1, "Send the search 1..3 times, one second apart")
 	cmd.Flags().BoolVar(&progMode, "programming-mode", false, "Only servers in programming mode (extended search)")
 	cmd.Flags().StringVar(&mac, "mac", "", "Only the server with this MAC address, aa:bb:cc:dd:ee:ff (extended search)")
 	cmd.Flags().StringVar(&service, "service", "", "Only servers with this service family and at least this version, family[:version] (extended search; core, devmgmt, tunnelling, routing, security...)")

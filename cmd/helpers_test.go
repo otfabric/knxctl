@@ -25,9 +25,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// The environment must not choose formats or gateways for the tests.
-	_ = os.Unsetenv("KNXCTL_FORMAT")
-	_ = os.Unsetenv("KNXCTL_GATEWAY")
+	// The environment must not choose formats, gateways, keyrings or
+	// secrets for the tests.
+	for _, kv := range os.Environ() {
+		if k, _, _ := strings.Cut(kv, "="); strings.HasPrefix(k, "KNXCTL_") {
+			_ = os.Unsetenv(k)
+		}
+	}
 	os.Exit(m.Run())
 }
 
@@ -53,6 +57,38 @@ func (s *syncBuffer) String() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.b.String()
+}
+
+// signalBuffer is a syncBuffer that closes ready once its content holds
+// marker: a test waits on ready for a line of the command.
+type signalBuffer struct {
+	syncBuffer
+	marker string
+	ready  chan struct{}
+	once   sync.Once
+}
+
+func newSignalBuffer(marker string) *signalBuffer {
+	return &signalBuffer{marker: marker, ready: make(chan struct{})}
+}
+
+func (s *signalBuffer) Write(p []byte) (int, error) {
+	n, err := s.syncBuffer.Write(p)
+	if strings.Contains(s.String(), s.marker) {
+		s.once.Do(func() { close(s.ready) })
+	}
+	return n, err
+}
+
+// await waits for ch to be closed or to deliver, failing the test after
+// 20 s.
+func await[T any](t *testing.T, ch <-chan T, what string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(20 * time.Second):
+		t.Fatalf("timed out waiting for %s", what)
+	}
 }
 
 // run executes knxctl in process.
@@ -290,6 +326,21 @@ func (s *testServer) last(g string, svc apdu.APCI) (apdu.GroupValue, server.Tele
 		}
 	}
 	return apdu.GroupValue{}, server.Telegram{}, false
+}
+
+// sentTo reports whether a client has sent the service svc to the
+// individual address dst.
+func (s *testServer) sentTo(dst knx.IndividualAddress, svc apdu.APCI) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, tg := range s.telegrams {
+		if ia, ok := tg.Frame.Individual(); ok && ia == dst {
+			if p, err := apdu.Parse(tg.Frame.TPDU); err == nil && !p.TPCI.IsControl() && p.APCI == svc {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // eventually waits for cond.

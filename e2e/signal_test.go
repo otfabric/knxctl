@@ -7,6 +7,7 @@ package e2e
 import (
 	"bytes"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -17,34 +18,59 @@ import (
 	"time"
 )
 
-// lockedBuffer is written by the process copier and read by the test.
-type lockedBuffer struct {
-	mu sync.Mutex
-	b  bytes.Buffer
+// readyBuffer is written by the process copier and read by the test;
+// ready is closed once it holds marker.
+type readyBuffer struct {
+	mu     sync.Mutex
+	b      bytes.Buffer
+	marker string
+	ready  chan struct{}
+	once   sync.Once
 }
 
-func (l *lockedBuffer) Write(p []byte) (int, error) {
+func newReadyBuffer(marker string) *readyBuffer {
+	return &readyBuffer{marker: marker, ready: make(chan struct{})}
+}
+
+func (l *readyBuffer) Write(p []byte) (int, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.b.Write(p)
+	n, err := l.b.Write(p)
+	if strings.Contains(l.b.String(), l.marker) {
+		l.once.Do(func() { close(l.ready) })
+	}
+	return n, err
 }
 
-func (l *lockedBuffer) String() string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.b.String()
+// silentPeer is a UDP endpoint on 127.0.0.1 that answers nothing; heard is
+// closed when its first datagram arrives.
+func silentPeer(t *testing.T) (addr string, heard <-chan struct{}) {
+	t.Helper()
+	c, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	ch := make(chan struct{})
+	go func() {
+		buf := make([]byte, 1500)
+		if _, _, err := c.ReadFromUDP(buf); err == nil {
+			close(ch)
+		}
+	}()
+	return c.LocalAddr().String(), ch
 }
 
-// interrupt starts the binary, sends SIGINT once stderr holds ready (or
-// after a pause when ready is ""), and returns its exit code and stdout.
-func interrupt(t *testing.T, ready string, args ...string) (int, string) {
+// interrupt starts the binary with stderr going to errOut, sends SIGINT
+// once ready is closed, and returns its exit code and stdout. A binary
+// that is not ready within 10 s fails the test.
+func interrupt(t *testing.T, ready <-chan struct{}, errOut io.Writer, args ...string) (int, string) {
 	t.Helper()
 	bin := os.Getenv("KNXCTL_E2E_BIN")
 	if bin == "" {
 		t.Fatal("KNXCTL_E2E_BIN is not set; run make e2e")
 	}
 	var out bytes.Buffer
-	errOut := &lockedBuffer{}
 	cmd := exec.Command(bin, args...)
 	cmd.Stdout, cmd.Stderr = &out, errOut
 	if err := cmd.Start(); err != nil {
@@ -52,10 +78,14 @@ func interrupt(t *testing.T, ready string, args ...string) (int, string) {
 	}
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
-	deadline := time.Now().Add(10 * time.Second)
-	time.Sleep(300 * time.Millisecond)
-	for ready != "" && !strings.Contains(errOut.String(), ready) && time.Now().Before(deadline) {
-		time.Sleep(20 * time.Millisecond)
+	select {
+	case <-ready:
+	case err := <-done:
+		t.Fatalf("%v ended before it was ready: %v\n%s", args, err, out.String())
+	case <-time.After(10 * time.Second):
+		_ = cmd.Process.Kill()
+		<-done
+		t.Fatalf("%v not ready within 10 s", args)
 	}
 	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
 		t.Fatal(err)
@@ -79,25 +109,24 @@ func interrupt(t *testing.T, ready string, args ...string) (int, string) {
 }
 
 // SIGINT while a command waits for a server ends it with 130 and one
-// JSON error document (docs/exitcodes.md); a stream ends with 0.
+// JSON error document (docs/exitcodes.md); a stream ends with 0. Each
+// command is interrupted once its first datagram has reached its own
+// silent peer, so it is running and waiting.
 func TestSIGINT(t *testing.T) {
-	silent, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer silent.Close()
-	addr := silent.LocalAddr().String()
-	for _, args := range [][]string{
-		{"group", "read", "1/2/3", "-g", addr},
-		{"describe", addr},
-		{"property", "read", addr, "device", "11"},
+	for _, args := range []func(addr string) []string{
+		func(addr string) []string { return []string{"group", "read", "1/2/3", "-g", addr} },
+		func(addr string) []string { return []string{"describe", addr} },
+		func(addr string) []string { return []string{"property", "read", addr, "device", "11"} },
 	} {
-		code, out := interrupt(t, "", append(args, "--timeout", "30s", "--format", "json")...)
+		addr, heard := silentPeer(t)
+		a := append(args(addr), "--timeout", "30s", "--format", "json")
+		code, out := interrupt(t, heard, io.Discard, a...)
 		if code != 130 || !strings.Contains(out, `"interrupted"`) {
-			t.Fatalf("%v: exit %d\n%s", args, code, out)
+			t.Fatalf("%v: exit %d\n%s", a, code, out)
 		}
 	}
-	if code, out := interrupt(t, "serving on", "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--no-tcp"); code != 0 {
+	errOut := newReadyBuffer("serving on")
+	if code, out := interrupt(t, errOut.ready, errOut, "serve", "--listen", "127.0.0.1:0", "--no-discovery", "--no-tcp"); code != 0 {
 		t.Fatalf("serve: exit %d\n%s", code, out)
 	}
 }
