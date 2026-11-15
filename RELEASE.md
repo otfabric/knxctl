@@ -6,6 +6,24 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.12.1
+
+**Date:** 2026-11-15
+**Previous release:** v0.12.0
+
+No command or flag is added or changed.
+
+### Changed
+
+- Built on go-knx v0.11.1 (was v0.11.0) (go-knx RELEASE.md, v0.11.1). For the tool this means:
+  - A tunnel command that is stopped between a request and its acknowledgement leaves the tunnel's sequence in step, so the next telegram reaches the bus; before, the gateway acknowledged it as a repetition and dropped it.
+  - A feature request over UDP is acknowledged and repeated like a tunnelling request.
+  - With secure routing, a time synchronisation that is cut short is reported as an error and no frame is accepted on it.
+  - A command that waits for another send, also during a ROUTING_BUSY pause, ends when it is stopped or its time-out passes.
+  - After an error of a read or accept the loop waits 5 ms before the next attempt (longer while errors follow each other), and the first reconnect attempt comes between half the minimum delay and the minimum.
+
+---
+
 ## v0.12.0
 
 **Date:** 2026-11-14
