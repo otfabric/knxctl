@@ -70,7 +70,7 @@ func newPropertyCmd(a *app) *cobra.Command {
 	var rf remoteFlags
 	read := &cobra.Command{
 		Use:   "read host[:port] <object> <pid>",
-		Short: "Read a property (local M_PropRead, or A_PropertyValue_Read of a device with --device)",
+		Short: "Read a property (local M_PropRead, or A_PropertyValue_Read of a device with --device, which transmits)",
 		Long: `Open a device management connection and read count elements of a property
 from element start (start 0 reads the number of elements). The object is a type
 number or device (0x0000), router (0x0006) or knxnetip (0x000B, the KNXnet/IP
@@ -85,7 +85,7 @@ access); --connected uses a transport connection.`,
   knxctl property read 192.168.1.10 knxnetip 76 --count 30   # friendly name
   knxctl property read 192.168.1.10 knxnetip 53 --start 0     # number of tunnelling addresses
   knxctl property read 192.168.1.10 device 11 --device 1.1.5  # serial number of device 1.1.5
-  knxctl property read 192.168.1.10 device 11 --device 1.1.5 --keyring p.knxkeys --keyring-password ...   # secured with its tool key`,
+  knxctl property read 192.168.1.10 device 11 --device 1.1.5 --keyring p.knxkeys --keyring-password-file p.pw   # secured with its tool key`,
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			obj, err := parseObjectType(args[1])
@@ -205,7 +205,7 @@ func newPropertyWriteCmd(a *app) *cobra.Command {
 	var rf remoteFlags
 	write := &cobra.Command{
 		Use:   "write host[:port] <object> <pid> <hex data>",
-		Short: "Write a property (local M_PropWrite, or A_PropertyValue_Write of a device with --device)",
+		Short: "Write a property (local M_PropWrite, or A_PropertyValue_Write of a device with --device, which transmits)",
 		Long: `Open a device management connection and write count elements of a property
 from element start; the data holds the count elements, hexadecimal (at most
 1007 octets, with --device 248). The server

@@ -169,6 +169,9 @@ type telegramRecord struct {
 	Text    string `json:"text,omitempty"`
 	Error   string `json:"decodeError,omitempty"`
 	Secure  bool   `json:"secure,omitempty"`
+	// Dropped counts the telegrams serve dropped before this one because
+	// stdout did not take them (docs/json-output.md).
+	Dropped int64 `json:"dropped,omitempty"`
 }
 
 func serviceName(s apdu.APCI) string {
@@ -213,6 +216,9 @@ func (r telegramRecord) line() string {
 	}
 	if r.Secure {
 		s += " [secure]"
+	}
+	if r.Dropped > 0 {
+		s += fmt.Sprintf(" [%d dropped before]", r.Dropped)
 	}
 	return s
 }

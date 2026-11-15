@@ -8,6 +8,15 @@ other and with virtual group objects. Every telegram on the virtual network
 is printed to stdout (text lines or JSON Lines, see
 [json-output.md](json-output.md)).
 
+The printer runs apart from the server, so a stdout that does not take the
+output (a pager that stopped reading, a paused terminal) holds up neither
+the server nor its clients. Up to 1024 records wait for stdout; a telegram
+beyond them is dropped and counted: the next record has a `dropped` field
+(text: `[N dropped before]`), and serve ends with the warning `N telegrams
+dropped (output too slow)` on stderr. After Ctrl-C, serve waits at most 2 s
+for the waiting records; the ones not written by then are counted in that
+warning.
+
 ```sh
 knxctl serve --object 1/2/3:1.001:CRWU=off --object 1/2/4:9.001:CRT=21.5
 knxctl serve --config site.json --listen 127.0.0.1:3671 --no-discovery
@@ -32,13 +41,15 @@ knxctl serve --config site.json --routing --interface eth0
 | `--multicast` | `224.0.23.12:3671` | Multicast group of routing and discovery |
 | `--serial` | `00FA00000001` | KNX serial number, 12 hex digits |
 | `--programming-mode` | off | Announce programming mode in DEVICE_INFO |
-| `--secure-user` | | KNX IP Secure tunnelling user `id:password[:tunnel address]` (repeatable); makes the server secure |
-| `--device-password` | | Device authentication password of the secure server (env `KNXCTL_DEVICE_PASSWORD`) |
+| `--secure-users-file` | | Read KNX IP Secure tunnelling users from a file, one `id:password[:tunnel address]` per line; empty lines and lines starting with `#` are skipped (env `KNXCTL_SECURE_USERS_FILE`); makes the server secure |
+| `--secure-user` | | A KNX IP Secure tunnelling user `id:password[:tunnel address]` (repeatable, added to the file's); makes the server secure. A password on the command line is deprecated: use `--secure-users-file` |
+| `--device-password` | | Device authentication password of the secure server |
 | `--keyring`, `--keyring-password` | | Serve the secure tunnelling users of a keyring host; Data Secure telegrams of its groups are printed decrypted |
 | `--keyring-host` | first secure interface's host | Keyring device whose tunnelling interfaces to serve |
 | `--backbone-key` | the keyring's | KNX IP Secure routing backbone key with `--routing`, 32 hex digits |
 | `--secure-session-timeout` | `1m0s` | End KNX IP Secure sessions idle for this long; needs a secure server |
 | `--tool-key` | | Secure the remote device management of the server's device with this tool key, or `keyring` |
+| `--device-password-file`, `--keyring-password-file`, `--backbone-key-file`, `--tool-key-file` | | Read the secret from a file instead ([SECURITY.md](../SECURITY.md#secrets): variables, precedence); the secret flags themselves are deprecated |
 | `--interface` (global) | | Interface whose address is announced and on which the multicast group is joined |
 
 The server listens until Ctrl-C (SIGINT/SIGTERM), then disconnects its
@@ -131,7 +142,7 @@ or value exits 3 before anything is opened.
   indications are queued and paced; after a ROUTING_BUSY from another
   router the server pauses for its wait time and then slows down.
 - KNX IP Secure: secure tunnelling sessions (TCP and UDP) for
-  `--secure-user` or the keyring's users, ended after
+  `--secure-user`, `--secure-users-file` or the keyring's users, ended after
   `--secure-session-timeout` (default 60 s) without traffic, and secure
   routing with the backbone key.
 - Group objects that store written values and answer reads according to

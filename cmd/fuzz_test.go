@@ -5,8 +5,10 @@ package cmd
 import (
 	"encoding/hex"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/otfabric/go-knx/apdu"
 	"github.com/otfabric/go-knx/cemi"
@@ -208,6 +210,37 @@ func FuzzRedact(f *testing.F) {
 		}
 		if r != want {
 			t.Fatalf("%q -> %q", s, r)
+		}
+	})
+}
+
+// FuzzTermSafe feeds the escaping of peer and file strings: the result
+// is printable UTF-8, the input is recoverable from it, and a printable
+// string without a backslash is unchanged.
+func FuzzTermSafe(f *testing.F) {
+	for _, s := range []string{"", "knxctl test", "K\u00fcche", "\x1b[31mRED\x1b[0m\rFAKE", "\u009b\u202e\u2066", "a\\b", "\xff\xfe", "\ufffd", "\"q\"\t"} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		out := termSafe(s)
+		if !utf8.ValidString(out) {
+			t.Fatalf("%q -> %q: not UTF-8", s, out)
+		}
+		for _, r := range out {
+			if !strconv.IsPrint(r) {
+				t.Fatalf("%q -> %q: %U is not printable", s, out, r)
+			}
+		}
+		back, err := strconv.Unquote(`"` + strings.ReplaceAll(out, `"`, `\"`) + `"`)
+		if err != nil || back != s {
+			t.Fatalf("%q -> %q -> %q (%v)", s, out, back, err)
+		}
+		plain := utf8.ValidString(s) && !strings.ContainsRune(s, '\\')
+		for _, r := range s {
+			plain = plain && strconv.IsPrint(r)
+		}
+		if plain && out != s {
+			t.Fatalf("%q changed to %q", s, out)
 		}
 	})
 }

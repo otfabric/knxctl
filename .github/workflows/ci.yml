@@ -81,6 +81,25 @@ jobs:
         env:
           GOWORK: "off"
 
+  # The built binary, run as a user runs it: the injected version, exit
+  # codes, SIGINT (make e2e), and the same suite against a binary built
+  # with the race detector (make e2e-race).
+  e2e:
+    name: End to end
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: The binary
+        run: make e2e
+      - name: The binary built with the race detector
+        run: make e2e-race
+
   # Every release platform typechecks, linux/arm/v7 included.
   cross:
     name: Cross-compile

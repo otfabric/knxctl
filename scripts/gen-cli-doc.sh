@@ -4,6 +4,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 GOWORK=off go build -o bin/knxctl .
+# The reference must not depend on the caller's environment: no KNXCTL_
+# variable reaches the binary.
+for v in $(env | sed -n 's/^\(KNXCTL_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$v"
+done
 cmds="discover describe tunnel tunnel_connect tunnel_feature tunnel_feature_get tunnel_feature_set group group_write group_respond
 group_read group_answer group_listen monitor routing routing_monitor diagnose
 dpt dpt_list dpt_describe dpt_encode dpt_decode decode busmonitor property
@@ -16,7 +21,7 @@ property_read property_write keyring keyring_show serve version completion"
 	echo "Simulator configuration: [serve.md](serve.md)."
 	echo
 	echo '```text'
-	KNXCTL_FORMAT='' KNXCTL_GATEWAY='' bin/knxctl --help
+	bin/knxctl --help
 	echo '```'
 	for c in $cmds; do
 		args=$(echo "$c" | tr _ ' ')
@@ -25,7 +30,7 @@ property_read property_write keyring keyring_show serve version completion"
 		echo
 		echo '```text'
 		# shellcheck disable=SC2086
-		KNXCTL_FORMAT='' KNXCTL_GATEWAY='' bin/knxctl $args --help
+		bin/knxctl $args --help
 		echo '```'
 	done
 } > docs/cli.md

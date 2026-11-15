@@ -90,6 +90,7 @@ record has `"type": "telegram"`:
 | `dpt` | the datapoint type it was decoded with (`--map`, `--dpt`; `serve`: the object's type) |
 | `value`, `text` | the decoded value and its formatted text |
 | `decodeError` | the value does not fit the datapoint type |
+| `dropped` | `serve` only, when stdout did not keep up: the number of telegrams dropped before this one (absent when none were) |
 
 ```json
 {"schemaVersion":"1.0","type":"telegram","time":"2026-10-29T10:00:00.123456789Z","source":"1.1.1","group":"1/2/4","service":"response","data":"0C33","dpt":"9.001","value":21.5,"text":"21.5 °C"}

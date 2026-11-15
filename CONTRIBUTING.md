@@ -5,7 +5,10 @@
    staticcheck, golangci-lint, vet for every release platform, govulncheck,
    the tests with the race detector and the 85 % coverage gate). On Linux,
    `make test-multicast` must pass too: it fails instead of skipping the
-   routing tests when multicast loopback does not work.
+   routing tests when multicast loopback does not work. `make e2e` builds
+   the binary and runs it (exit codes, signals, the injected version); CI
+   runs it and `make e2e-race`, the same suite against a binary built with
+   the race detector.
 3. New commands follow the existing shape: a `newXxxCmd(a *app)` constructor,
    validation of addresses, datapoint types and values before anything is
    sent, typed errors from `internal/errs`, a result type with `Text()` (and

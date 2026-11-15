@@ -5,6 +5,7 @@ package cmd
 import (
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/otfabric/go-knx/dpt"
 	"github.com/spf13/cobra"
@@ -12,8 +13,9 @@ import (
 )
 
 // Shell completion: flags with a fixed set of values complete those
-// values, file flags complete files of their type, and every other flag
-// and positional argument completes nothing (no file names).
+// values, file flags complete files of their type (any file for the
+// -file flags of secrets), and every other flag and positional argument
+// completes nothing (no file names).
 
 // fixed completes values and no files.
 func fixed(values ...string) cobra.CompletionFunc {
@@ -25,6 +27,11 @@ func files(ext ...string) cobra.CompletionFunc {
 	return func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return ext, cobra.ShellCompDirectiveFilterFileExt
 	}
+}
+
+// anyFile completes file names: the files that secrets are read from.
+func anyFile(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveDefault
 }
 
 // noFiles completes nothing: free values such as addresses and numbers.
@@ -98,7 +105,11 @@ func registerCompletions(root *cobra.Command) {
 				return
 			}
 			fn, ok := byFlag[f.Name]
-			if !ok {
+			switch {
+			case ok:
+			case strings.HasSuffix(f.Name, "-file"):
+				fn = anyFile
+			default:
 				fn = noFiles
 			}
 			_ = c.RegisterFlagCompletionFunc(f.Name, fn)

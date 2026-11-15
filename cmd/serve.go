@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -90,10 +91,10 @@ func buildDevice(dc deviceConfig) (*device.Device, error) {
 
 func newServeCmd(a *app) *cobra.Command {
 	var listenAddr, name, addr, config, devAddr string
-	var tunnels, objects, secureUsers []string
+	var tunnels, objects, secureUserFlags []string
 	var routing, noDiscovery, noTCP, concurrentBusmon bool
 	var sec secureFlags
-	var keyringHost, serial, multicast, toolKey string
+	var keyringHost, serial, multicast, toolKey, usersFile string
 	var progMode bool
 	var sessionTimeout time.Duration
 	cmd := &cobra.Command{
@@ -103,8 +104,10 @@ func newServeCmd(a *app) *cobra.Command {
 routing) with a virtual KNX network behind it: telegrams of one tunnelling
 client reach the other clients and the virtual group objects, which store
 written values and answer reads according to their flags. Every telegram is
-printed. This is a simulator for development and tests; it does not emulate a
-physical KNX line. The server's own device (--address) answers local device
+printed, apart from the server: when stdout does not keep up, 1024 records
+wait and the telegrams beyond them are dropped and counted (the dropped field
+of the next record, and a warning at the end). This is a simulator for
+development and tests; it does not emulate a physical KNX line. The server's own device (--address) answers local device
 management and remote device management (property read, write and description)
 through a tunnel; with --tool-key only secured with that tool key (KNX Data
 Secure tool access).
@@ -175,7 +178,14 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 				}
 				opts = append(opts, server.WithTunnelAddresses(ias...))
 			}
-			secOpt, keys, err := serveSecure(&sec, secureUsers, keyringHost, &cfg)
+			users, err := secureUsers(secureUserFlags, usersFile, cmd.Flags().Changed("secure-users-file"))
+			if err != nil {
+				return err
+			}
+			// A keyring host fills in the tunnels and the address that
+			// neither the flags nor the configuration file gave.
+			ownTunnels, ownAddress := len(cfg.Tunnels) > 0, cfg.Address != ""
+			secOpt, keys, err := serveSecure(&sec, users, keyringHost, &cfg)
 			if err != nil {
 				return err
 			}
@@ -184,7 +194,7 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 			}
 			if cmd.Flags().Changed("secure-session-timeout") {
 				if secOpt == nil {
-					return errs.Invalid("--secure-session-timeout needs a secure server (--secure-user or --keyring)")
+					return errs.Invalid("--secure-session-timeout needs a secure server (--secure-user, --secure-users-file or --keyring)")
 				}
 				if sessionTimeout <= 0 {
 					return errs.Invalid("--secure-session-timeout: want a positive duration, got %v", sessionTimeout)
@@ -202,10 +212,10 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 			} else if sec.backboneKey != "" {
 				return errs.Invalid("--backbone-key needs --routing")
 			}
-			if len(cfg.Tunnels) > 0 && !cmd.Flags().Changed("tunnels") && config == "" {
+			if !ownTunnels && len(cfg.Tunnels) > 0 {
 				opts = append(opts, server.WithTunnelAddresses(parseAddrs(cfg.Tunnels)...))
 			}
-			if cfg.Address != "" && !cmd.Flags().Changed("address") && config == "" {
+			if !ownAddress && cfg.Address != "" {
 				opts = append(opts, server.WithIndividualAddress(knx.MustParseIndividualAddress(cfg.Address)))
 			}
 			if toolKey != "" {
@@ -232,8 +242,8 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 				}
 				s.AddDevice(d)
 			}
-			st := a.stream()
-			s.Subscribe(func(t server.Telegram) {
+			pr := newPrinter(a.stream(), serveQueue)
+			unsubscribe := s.Subscribe(func(t server.Telegram) {
 				g, ok := t.Frame.Group()
 				if !ok {
 					return
@@ -249,8 +259,7 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 				svc, v, err := apdu.ParseGroupValue(frame.TPDU)
 				if err != nil {
 					if secured {
-						r := telegramRecord{Time: nowUTC(), Source: t.Frame.Source.String(), Group: g.String(), Service: "secure", Secure: true}
-						_ = st.Record("telegram", r.line(), r)
+						pr.add(telegramRecord{Time: nowUTC(), Source: t.Frame.Source.String(), Group: g.String(), Service: "secure", Secure: true})
 					}
 					return
 				}
@@ -264,14 +273,21 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 						}
 					}
 				}
-				_ = st.Record("telegram", r.line(), r)
+				pr.add(r)
 			})
 			if err := s.Start(cmd.Context()); err != nil {
+				unsubscribe()
+				pr.close(0)
 				return err
 			}
 			a.warn("serving on %s (%d devices; Ctrl-C to stop)", s.Addr(), len(cfg.Devices))
 			<-cmd.Context().Done()
-			return s.Close()
+			err = s.Close()
+			unsubscribe()
+			if n := pr.close(serveDrainTimeout); n > 0 {
+				a.warn("%d telegrams dropped (output too slow)", n)
+			}
+			return err
 		},
 	}
 	f := cmd.Flags()
@@ -286,17 +302,18 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 	f.BoolVar(&noDiscovery, "no-discovery", false, "Do not join the multicast group for search requests")
 	f.BoolVar(&noTCP, "no-tcp", false, "Do not accept KNXnet/IP over TCP")
 	f.BoolVar(&concurrentBusmon, "concurrent-busmonitor", false, "Let busmonitor connections coexist with tunnels (simulators)")
-	f.StringArrayVar(&secureUsers, "secure-user", nil, "KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure)")
+	f.StringArrayVar(&secureUserFlags, "secure-user", nil, "KNX IP Secure tunnelling user id:password[:tunnel address] (repeatable; makes the server secure); a password on the command line is deprecated: use --secure-users-file")
+	f.StringVar(&usersFile, "secure-users-file", "", "Read secure tunnelling users from `file`, one id:password[:tunnel address] per line; empty lines and # comments are skipped (env KNXCTL_SECURE_USERS_FILE)")
 	f.DurationVar(&sessionTimeout, "secure-session-timeout", server.DefaultSecureSessionTimeout, "End KNX IP Secure sessions idle for this long")
-	f.StringVar(&sec.devicePassword, "device-password", envOr("KNXCTL_DEVICE_PASSWORD", ""), "Device authentication password of the secure server (env KNXCTL_DEVICE_PASSWORD)")
+	secretFlag(f, &sec.devicePassword, "device-password", "KNXCTL_DEVICE_PASSWORD", "Device authentication password of the secure server")
 	f.StringVar(&sec.keyringPath, "keyring", envOr("KNXCTL_KEYRING", ""), "Serve the secure tunnelling users of a keyring host (env KNXCTL_KEYRING)")
-	f.StringVar(&sec.keyringPassword, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
-	f.StringVar(&sec.backboneKey, "backbone-key", envOr("KNXCTL_BACKBONE_KEY", ""), "KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's) (env KNXCTL_BACKBONE_KEY)")
+	secretFlag(f, &sec.keyringPassword, "keyring-password", "KNXCTL_KEYRING_PASSWORD", "Password of the keyring")
+	secretFlag(f, &sec.backboneKey, "backbone-key", "KNXCTL_BACKBONE_KEY", "KNX IP Secure routing backbone key for --routing, 32 hex digits (default: the keyring's)")
 	f.BoolVar(&progMode, "programming-mode", false, "Announce programming mode in DEVICE_INFO (search and description)")
 	f.StringVar(&serial, "serial", "", "KNX serial number, 12 hex digits (default 00FA00000001)")
 	f.StringVar(&multicast, "multicast", "224.0.23.12:3671", "Multicast group of routing")
 	f.StringVar(&keyringHost, "keyring-host", "", "Keyring device whose tunnelling interfaces to serve (default: the host of the first secure interface)")
-	f.StringVar(&toolKey, "tool-key", envOr("KNXCTL_TOOL_KEY", ""), "Secure the remote device management of the server's device with this tool key, 32 hex digits, or \"keyring\" for its tool key in --keyring (env KNXCTL_TOOL_KEY)")
+	secretFlag(f, &toolKey, "tool-key", "KNXCTL_TOOL_KEY", "Secure the remote device management of the server's device with this tool key, 32 hex digits, or \"keyring\" for its tool key in --keyring")
 	return cmd
 }
 
@@ -341,11 +358,49 @@ func parseAddrs(ss []string) []knx.IndividualAddress {
 	return out
 }
 
-// serveSecure builds the secure option of serve from --secure-user or a
-// keyring host, and returns the keyring's group keys (to print Data
+// userSpec is one secure tunnelling user id:password[:tunnel address] of
+// serve, and where it came from (for messages, which mask the password).
+type userSpec struct {
+	from string
+	spec string
+	file bool // a line of a file: a malformed one is not shown
+}
+
+// secureUsers returns the users of --secure-user and of the users file:
+// --secure-users-file, else KNXCTL_SECURE_USERS_FILE. The file holds one
+// user per line as --secure-user takes it; empty lines and lines that
+// start with # are skipped.
+func secureUsers(flags []string, file string, fileGiven bool) ([]userSpec, error) {
+	var users []userSpec
+	for _, u := range flags {
+		users = append(users, userSpec{from: "--secure-user", spec: u})
+	}
+	what := "--secure-users-file"
+	if !fileGiven {
+		what, file = "KNXCTL_SECURE_USERS_FILE", os.Getenv("KNXCTL_SECURE_USERS_FILE")
+		if file == "" {
+			return users, nil
+		}
+	}
+	b, err := readFileLimited(file, maxSecretFileSize)
+	if err != nil {
+		return nil, errs.New(errs.KindInvalidInput, errs.CodeInvalidInput, "%s: %v", what, err)
+	}
+	for i, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		users = append(users, userSpec{from: fmt.Sprintf("%s %s line %d", what, file, i+1), spec: line, file: true})
+	}
+	return users, nil
+}
+
+// serveSecure builds the secure option of serve from the secure users or
+// a keyring host, and returns the keyring's group keys (to print Data
 // Secure telegrams). A keyring host also gives the server address and
 // tunnels when the configuration has none.
-func serveSecure(sec *secureFlags, users []string, host string, cfg *serveConfig) (server.Option, map[knx.GroupAddress]keyring.Key, error) {
+func serveSecure(sec *secureFlags, users []userSpec, host string, cfg *serveConfig) (server.Option, map[knx.GroupAddress]keyring.Key, error) {
 	kr, err := sec.keyring()
 	if err != nil {
 		return nil, nil, err
@@ -407,22 +462,25 @@ func serveSecure(sec *secureFlags, users []string, host string, cfg *serveConfig
 		}
 	}
 	for _, u := range users {
-		parts := strings.SplitN(u, ":", 3)
-		if len(parts) < 2 {
-			return nil, nil, errs.Invalid("--secure-user %q: want id:password[:tunnel address]", redact(u))
+		parts := strings.SplitN(u.spec, ":", 3)
+		switch {
+		case len(parts) < 2 && u.file:
+			return nil, nil, errs.Invalid("%s: want id:password[:tunnel address]", u.from)
+		case len(parts) < 2:
+			return nil, nil, errs.Invalid("%s %q: want id:password[:tunnel address]", u.from, redact(u.spec))
 		}
 		id, err := strconv.Atoi(parts[0])
 		if err != nil || id < 1 || id > 127 {
-			return nil, nil, errs.Invalid("--secure-user: user id %q (1..127)", parts[0])
+			return nil, nil, errs.Invalid("%s: user id %q (1..127)", u.from, parts[0])
 		}
 		k, err := secure.UserPasswordKey(parts[1])
 		if err != nil {
-			return nil, nil, errs.Invalid("--secure-user %d: %v", id, err)
+			return nil, nil, errs.Invalid("%s %d: %v", u.from, id, err)
 		}
 		user := server.SecureUser{Key: k}
 		if len(parts) == 3 {
 			if user.Address, err = knx.ParseIndividualAddress(parts[2]); err != nil {
-				return nil, nil, errs.Invalid("--secure-user %d: %v", id, err)
+				return nil, nil, errs.Invalid("%s %d: %v", u.from, id, err)
 			}
 		}
 		su[uint8(id)] = user

@@ -56,12 +56,14 @@ type keyringDevice struct {
 
 func (r keyringResult) Text() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "project %q, created %s by %s\n", r.Project, r.Created, r.CreatedBy)
+	// Strings of the file are escaped (termSafe); addresses and keys are
+	// formatted by knxctl.
+	fmt.Fprintf(&b, "project %q, created %s by %s\n", r.Project, termSafe(r.Created), termSafe(r.CreatedBy))
 	if bb := r.Backbone; bb != nil {
-		fmt.Fprintf(&b, "backbone %s latency %d ms%s\n", bb.MulticastAddress, bb.LatencyMs, opt(" key ", bb.Key))
+		fmt.Fprintf(&b, "backbone %s latency %d ms%s\n", termSafe(bb.MulticastAddress), bb.LatencyMs, opt(" key ", bb.Key))
 	}
 	for _, i := range r.Interfaces {
-		fmt.Fprintf(&b, "interface %s %s", i.Address, i.Type)
+		fmt.Fprintf(&b, "interface %s %s", i.Address, termSafe(i.Type))
 		if i.Host != "" {
 			fmt.Fprintf(&b, " host %s", i.Host)
 		}
@@ -118,7 +120,7 @@ passwords are shown only with --secrets.`,
 			return a.emit("keyring show", summarise(kr, secrets))
 		},
 	}
-	show.Flags().StringVar(&password, "keyring-password", envOr("KNXCTL_KEYRING_PASSWORD", ""), "Password of the keyring (env KNXCTL_KEYRING_PASSWORD)")
+	secretFlag(show.Flags(), &password, "keyring-password", "KNXCTL_KEYRING_PASSWORD", "Password of the keyring")
 	show.Flags().BoolVar(&secrets, "secrets", false, "Show keys and passwords")
 	cmd.AddCommand(show)
 	return cmd

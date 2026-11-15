@@ -9,8 +9,10 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/otfabric/knxctl/internal/errs"
 )
@@ -50,6 +52,43 @@ func decodeHex(s string) ([]byte, error) {
 		s = s[2:]
 	}
 	return hex.DecodeString(s)
+}
+
+// termSafe returns s with every character escaped that a terminal would
+// act on or display misleadingly, as strconv.Quote escapes it but without
+// the quotes: C0 and C1 controls, DEL, Unicode format characters (the
+// bidirectional controls among them) and other non-printable runes, and
+// invalid UTF-8. A backslash is doubled, so the original stays
+// recoverable. Strings from peers and files (a server's friendly name, a
+// keyring's creator) go through it before table and text output.
+func termSafe(s string) string {
+	safe := true
+	for _, r := range s {
+		if r == '\\' || r == utf8.RuneError || !strconv.IsPrint(r) {
+			safe = false
+			break
+		}
+	}
+	if safe {
+		return s
+	}
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		r, n := utf8.DecodeRuneInString(s[i:])
+		switch {
+		case r == utf8.RuneError && n == 1:
+			fmt.Fprintf(&b, `\x%02x`, s[i])
+		case r == '\\':
+			b.WriteString(`\\`)
+		case strconv.IsPrint(r):
+			b.WriteString(s[i : i+n])
+		default:
+			q := strconv.QuoteRune(r)
+			b.WriteString(q[1 : len(q)-1])
+		}
+		i += n
+	}
+	return b.String()
 }
 
 // Input files (keyrings, configurations) are small; a larger file is not

@@ -6,6 +6,35 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.13.0
+
+**Date:** 2026-11-15
+**Previous release:** v0.12.1
+
+Secrets from files, an output queue for `serve`, and stricter numeric flags. Built on go-knx v0.11.1, as v0.12.1.
+
+### Added
+
+- Every secret has a file alternative: `--keyring-password-file`, `--user-password-file`, `--device-password-file`, `--backbone-key-file` and `--tool-key-file`, and the variables `KNXCTL_KEYRING_PASSWORD_FILE`, `KNXCTL_USER_PASSWORD_FILE`, `KNXCTL_DEVICE_PASSWORD_FILE`, `KNXCTL_BACKBONE_KEY_FILE` and `KNXCTL_TOOL_KEY_FILE`. A file holds the value; a trailing newline is not part of it. A file that is empty, cannot be read or is larger than 16 MiB exits 3 before anything is sent; a secret given both directly and as a file (two flags, or two variables) exits 3 too.
+- `serve --secure-users-file` (env `KNXCTL_SECURE_USERS_FILE`): secure tunnelling users from a file, one `id:password[:tunnel address]` per line, as `--secure-user` takes them; empty lines and `#` comments are skipped. An entry that is wrong is named by its line, without its password.
+- `serve` records have a `dropped` field (text: `[N dropped before]`) when telegrams were dropped before them because stdout did not keep up (docs/json-output.md).
+- `make e2e-race` runs the e2e suite against a binary built with the race detector; CI runs `make e2e` and `make e2e-race`.
+
+### Changed
+
+- The plain secret flags (`--keyring-password`, `--user-password`, `--device-password`, `--backbone-key`, `--tool-key`) and passwords in `serve --secure-user` still work and are marked deprecated in the help: use the file flags or the variables.
+- The help output and `docs/cli.md` show no default for the secret flags; the environment is read after the command line is parsed. `make docs` runs the binary with no `KNXCTL_` variable set. See SECURITY.md, "Secret values in help output of earlier releases".
+- `serve` prints its telegrams on a goroutine of its own, apart from the server: a stdout that does not take the output (a pager that stopped reading, a paused terminal) no longer holds up the server or its clients. Up to 1024 records wait; a telegram beyond them is dropped and counted, and serve ends with the warning `N telegrams dropped (output too slow)`. After Ctrl-C, serve waits at most 2 s for the waiting records.
+- Integer flags (`--count`, `--repeat`, `--main`, `--user-id`) take a value only when the platform's `int` holds it: on 32-bit builds (linux/armv7) a value beyond 2147483647 or below -2147483648 is a usage error (exit 2) instead of being read as another number. 64-bit builds behave as before.
+- Table and text output escapes control and bidirectional characters in strings from servers and files (a server's friendly name in `discover --format table` and `decode`, the creator, date and types of `keyring show`), as Go's `strconv.Quote` does, without the quotes; JSON is unchanged.
+- The root help and SECURITY.md list `property read` and `property write` with `--device` among the commands that send telegrams, and `property write` without `--device` and `tunnel feature set` as changing the configuration of the KNXnet/IP server.
+
+### Fixed
+
+- `serve --config` with `--keyring`: a configuration without `tunnels` or `address` takes the keyring host's tunnelling addresses and address, as without `--config`; before, the server refused its own secure users (exit 3).
+
+---
+
 ## v0.12.1
 
 **Date:** 2026-11-15

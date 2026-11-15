@@ -123,7 +123,7 @@ func newDPTCmd(a *app) *cobra.Command {
 			return a.emit("dpt list", l)
 		},
 	}
-	list.Flags().IntVar(&main, "main", 0, "Only the subtypes of this main number (0: all)")
+	intVarP(list.Flags(), &main, "main", "", 0, "Only the subtypes of this main number (0: all)")
 	describe := &cobra.Command{
 		Use:     "describe <dpt>",
 		Short:   "Describe a datapoint type",

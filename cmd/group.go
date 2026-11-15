@@ -298,7 +298,7 @@ type listenFlags struct {
 func (l *listenFlags) add(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&l.maps, "map", nil, "Decode a group with a datapoint type: group=dpt (repeatable)")
 	cmd.Flags().StringVarP(&l.dptID, "dpt", "t", "", "Decode every group with this datapoint type")
-	cmd.Flags().IntVarP(&l.count, "count", "n", 0, "Stop after this many telegrams (0: no limit)")
+	intVarP(cmd.Flags(), &l.count, "count", "n", 0, "Stop after this many telegrams (0: no limit)")
 	cmd.Flags().DurationVar(&l.duration, "duration", 0, "Stop after this time (0: no limit)")
 }
 
