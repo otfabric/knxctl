@@ -6,6 +6,19 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.13.3
+
+**Date:** 2026-11-16
+**Previous release:** v0.13.2
+
+No command or flag is added or changed.
+
+### Changed
+
+- Built on go-knx v0.14.0 (was v0.13.0) (go-knx RELEASE.md, v0.14.0). Output and exit codes do not change. `busmonitor` ends without an error when its `--duration` passes, whatever error `tunnel.Conn.Receive` gives for it. `discover`, `describe` and `diagnose` call `discovery.Search` and `Describe` with a context that has no deadline: their window is `discovery.WithTimeout(--timeout)`, whose error was and is `knx: timeout: discovery: …`, exit 5. `property read` and `property write` use devmgmt, whose message at a deadline is unchanged. knxctl classifies errors with `errors.Is`, and `knx.ErrTimeout` and `context.DeadlineExceeded` both give exit 5. No command prints a `*secure.RoutingTimer`.
+
+---
+
 ## v0.13.2
 
 **Date:** 2026-11-16
