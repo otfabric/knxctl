@@ -6,6 +6,19 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.13.2
+
+**Date:** 2026-11-16
+**Previous release:** v0.13.1
+
+No command or flag is added or changed.
+
+### Changed
+
+- Built on go-knx v0.13.0 (was v0.12.0) (go-knx RELEASE.md, v0.13.0). Exit codes do not change: knxctl classifies errors with `errors.Is`, and a timeout was and is exit 5. Where the command's own `--timeout` ends `tunnel feature get` or `tunnel feature set` before the server answers, or ends the timer synchronisation of `--routing` with a backbone key, the error message now starts with `knx: timeout:` (for example `knx: timeout: tunnel: context deadline exceeded`, where it read `context deadline exceeded`). `keyring show`, `--secrets` included, prints as before: it copies the fields into its own strings.
+
+---
+
 ## v0.13.1
 
 **Date:** 2026-11-16
