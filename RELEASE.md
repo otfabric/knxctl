@@ -6,6 +6,19 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.13.1
+
+**Date:** 2026-11-16
+**Previous release:** v0.13.0
+
+No command or flag is added or changed.
+
+### Changed
+
+- Built on go-knx v0.12.0 (was v0.11.1) (go-knx RELEASE.md, v0.12.0). Its `### Breaking` entries do not change what the tool prints or its exit status: knxctl already takes both `knx.ErrTimeout` and `context.DeadlineExceeded` as a time-out and `knx.ErrClosed` as a connection error, and `keyring show` writes keys from their octets, which the library's redacted `String` does not change. Ending the tool while a tunnel reconnects can take up to 1 s longer: the library then disconnects the channel the reconnection opened.
+
+---
+
 ## v0.13.0
 
 **Date:** 2026-11-15
