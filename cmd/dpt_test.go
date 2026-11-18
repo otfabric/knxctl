@@ -26,8 +26,9 @@ func TestDPTList(t *testing.T) {
 	if !strings.HasPrefix(first["id"].(string), "20.") || first["kind"] == nil || first["bits"] == nil {
 		t.Fatalf("type %v", first)
 	}
-	// An unknown main number lists nothing, as an empty array.
-	res = resultOf(t, run(t, "dpt", "list", "--main", "250", "--format", "json"), "dpt list")
+	// A main number without datapoint types lists nothing, as an empty array
+	// (999: KNX defines none; 250 has types since go-knx v0.15.0).
+	res = resultOf(t, run(t, "dpt", "list", "--main", "999", "--format", "json"), "dpt list")
 	if l := res["types"].([]any); len(l) != 0 {
 		t.Fatalf("types %v", l)
 	}
