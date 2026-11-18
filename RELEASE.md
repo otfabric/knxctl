@@ -6,6 +6,19 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.14.0
+
+**Date:** 2026-11-18
+**Previous release:** v0.13.3
+
+No command or flag is added or changed. `dpt` knows 95 more datapoint subtypes.
+
+### Changed
+
+- Built on go-knx v0.15.0 (was v0.14.0) (go-knx RELEASE.md, v0.15.0). `dpt list`, `dpt decode` and `dpt encode` now cover 334 subtypes (was 239). The new ones include the DPT 20 and 23 enumerations and the composite types of the 200 range, whose field order follows the KNX master data for ETS schema 23. Subtypes that were already known decode and encode as before. Output for those subtypes, errors and exit codes do not change.
+
+---
+
 ## v0.13.3
 
 **Date:** 2026-11-16
