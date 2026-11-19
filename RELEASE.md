@@ -6,6 +6,21 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.15.0
+
+**Date:** 2026-11-19
+**Previous release:** v0.14.1
+
+The bits of a bit set (DPT 21, 22, 26, 30) are shown and taken by name, from go-knx's `dpt.Type.Flags` (the KNX master data names). No command or flag is added, and no exit code or existing JSON field changes.
+
+### Added
+
+- `dpt describe` lists the named bits of a bit set, least significant first. In JSON, `dpt describe` and `dpt list` give them as `namedBits` (`bit`, `name`).
+- Decoded bit sets name their set bits: `dpt encode`, `dpt decode` (`03  0b00000011: forceRequest, protection`) and the telegram records of `group read`, `group listen`, `group monitor`, `routing monitor` and `serve`. JSON adds `bitNames`, absent when no named bit is set; `text` is unchanged.
+- A bit-set value can be given by name wherever a value is taken: `dpt encode`, `group write`, `group respond`, `group answer`, and the object values of `serve`. The input is comma-separated: a whole name (`forceRequest`), `bitN`, or a part of exactly one name (`out of service` for 21.001). Matching ignores case, spaces and punctuation, and `none` sets no bit. Numbers parse as before. An unknown or ambiguous name exits 3 and lists the bits.
+
+---
+
 ## v0.14.1
 
 **Date:** 2026-11-19

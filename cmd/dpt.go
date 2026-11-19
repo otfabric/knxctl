@@ -14,20 +14,21 @@ import (
 )
 
 type dptRecord struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Unit        string   `json:"unit,omitempty"`
-	Bits        int      `json:"bits"`
-	Kind        string   `json:"kind"`
-	Min         *float64 `json:"min,omitempty"`
-	Max         *float64 `json:"max,omitempty"`
-	Labels      []string `json:"labels,omitempty"`
-	Enum        []string `json:"values,omitempty"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Unit        string    `json:"unit,omitempty"`
+	Bits        int       `json:"bits"`
+	Kind        string    `json:"kind"`
+	Min         *float64  `json:"min,omitempty"`
+	Max         *float64  `json:"max,omitempty"`
+	Labels      []string  `json:"labels,omitempty"`
+	Enum        []string  `json:"values,omitempty"`
+	Flags       []dptFlag `json:"namedBits,omitempty"`
 }
 
 func newDPTRecord(t *dpt.Type) dptRecord {
-	r := dptRecord{ID: t.ID.String(), Name: t.Name, Description: t.Description, Unit: t.Unit, Bits: t.Bits, Kind: t.Kind.String(), Labels: t.Labels}
+	r := dptRecord{ID: t.ID.String(), Name: t.Name, Description: t.Description, Unit: t.Unit, Bits: t.Bits, Kind: t.Kind.String(), Labels: t.Labels, Flags: typeFlags(t)}
 	if t.HasRange {
 		mn, mx := t.Min, t.Max
 		r.Min, r.Max = &mn, &mx
@@ -83,6 +84,12 @@ func (d dptDescribe) Text() string {
 	if len(d.Enum) > 0 {
 		fmt.Fprintf(&sb, "\n  values: %s", strings.Join(d.Enum, ", "))
 	}
+	if len(d.Flags) > 0 {
+		sb.WriteString("\n  bits (least significant 0; the others are not named):")
+		for _, f := range d.Flags {
+			fmt.Fprintf(&sb, "\n    %2d  %s", f.Bit, f.Name)
+		}
+	}
 	return sb.String()
 }
 
@@ -92,14 +99,20 @@ type codecResult struct {
 	Small bool   `json:"small"`
 	Value any    `json:"value"`
 	Shown string `json:"text"`
+	// Flags are the names of the set bits of a bit set.
+	Flags []string `json:"bitNames,omitempty"`
 }
 
 func (c codecResult) Text() string {
-	s := fmt.Sprintf("%s  %s  (DPT %s)", c.Data, c.Shown, c.DPT)
+	s := fmt.Sprintf("%s  %s  (DPT %s)", c.Data, withFlags(c.Shown, c.Flags), c.DPT)
 	if c.Small {
 		s += ", sent in the APCI octet"
 	}
 	return s
+}
+
+func newCodecResult(t *dpt.Type, b []byte, v any) codecResult {
+	return codecResult{DPT: t.ID.String(), Data: strings.ToUpper(hex.EncodeToString(b)), Small: t.Small(), Value: jsonValue(v), Shown: t.Format(v), Flags: setFlags(t, v)}
 }
 
 func newDPTCmd(a *app) *cobra.Command {
@@ -140,14 +153,15 @@ func newDPTCmd(a *app) *cobra.Command {
 	encode := &cobra.Command{
 		Use:     "encode <dpt> <value>",
 		Short:   "Encode a value to the octets of a group telegram",
-		Example: "  knxctl dpt encode 9.001 21.5\n  knxctl dpt encode 10.001 'Mon 12:30:00'\n  knxctl dpt encode 232.600 '#FF8000'",
+		Long:    "Encode a value to the octets of a group telegram. A bit set (DPT 21, 22, 26, 30) also takes the names of its bits, comma-separated, or bitN (dpt describe lists them); names match without regard to case, spaces and punctuation.",
+		Example: "  knxctl dpt encode 9.001 21.5\n  knxctl dpt encode 10.001 'Mon 12:30:00'\n  knxctl dpt encode 232.600 '#FF8000'\n  knxctl dpt encode 21.100 forceRequest,protection",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			t, err := lookupDPT(args[0])
 			if err != nil {
 				return err
 			}
-			v, err := t.Parse(args[1])
+			v, err := parseDPTValue(t, args[1])
 			if err != nil {
 				return errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "%v", err)
 			}
@@ -155,13 +169,13 @@ func newDPTCmd(a *app) *cobra.Command {
 			if err != nil {
 				return errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "%v", err)
 			}
-			return a.emit("dpt encode", codecResult{DPT: t.ID.String(), Data: strings.ToUpper(hex.EncodeToString(b)), Small: t.Small(), Value: jsonValue(v), Shown: t.Format(v)})
+			return a.emit("dpt encode", newCodecResult(t, b, v))
 		},
 	}
 	decode := &cobra.Command{
 		Use:     "decode <dpt> <hex>",
 		Short:   "Decode the octets of a group telegram",
-		Example: "  knxctl dpt decode 9.001 0C33\n  knxctl dpt decode 1.001 01",
+		Example: "  knxctl dpt decode 9.001 0C33\n  knxctl dpt decode 1.001 01\n  knxctl dpt decode 21.001 03",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			t, err := lookupDPT(args[0])
@@ -176,7 +190,7 @@ func newDPTCmd(a *app) *cobra.Command {
 			if err != nil {
 				return errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "%v", err)
 			}
-			return a.emit("dpt decode", codecResult{DPT: t.ID.String(), Data: strings.ToUpper(hex.EncodeToString(b)), Small: t.Small(), Value: jsonValue(v), Shown: t.Format(v)})
+			return a.emit("dpt decode", newCodecResult(t, b, v))
 		},
 	}
 	cmd.AddCommand(list, describe, encode, decode)

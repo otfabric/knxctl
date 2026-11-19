@@ -55,6 +55,7 @@ func newGroupWriteCmd(a *app, respond bool) *cobra.Command {
 	use, short, svc := "write group [value]", "Send A_GroupValue_Write (transmits a telegram)", "write"
 	example := `  knxctl group write 1/2/3 on --gateway 192.168.1.10
   knxctl group write 1/2/4 21.5 --dpt 9.001 --gateway 192.168.1.10
+  knxctl group write 1/2/7 forceRequest,protection --dpt 21.100 --gateway 192.168.1.10
   knxctl group write 1/2/5 --raw 0C33 --routing --source 1.1.250`
 	if respond {
 		use, short, svc = "respond group [value]", "Send A_GroupValue_Response (transmits a telegram)", "response"
@@ -63,7 +64,7 @@ func newGroupWriteCmd(a *app, respond bool) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     strings.Replace(use, "group", "<group>", 1),
 		Short:   short,
-		Long:    short + ".\n\nThe value is parsed with --dpt (see knxctl dpt list); without it a boolean\n(on/off, true/false, 1/0) is sent as DPT 1. --raw sends octets as given.",
+		Long:    short + ".\n\nThe value is parsed with --dpt (see knxctl dpt list); without it a boolean\n(on/off, true/false, 1/0) is sent as DPT 1. A bit set (DPT 21, 22, 26, 30) also\ntakes the names of its bits, comma-separated, or bitN (knxctl dpt describe).\n--raw sends octets as given.",
 		Example: example,
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {

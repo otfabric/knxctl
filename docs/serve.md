@@ -114,7 +114,7 @@ All `--object` objects belong to one device named `virtual` at
 | `objects[].dpt` | string | Datapoint type |
 | `objects[].flags` | string | Flag letters; `CRWU` when absent or empty |
 | `objects[].groups` | array of strings | Group addresses, the first being the sending address |
-| `objects[].value` | string | Initial value in text form (optional) |
+| `objects[].value` | string | Initial value in text form (optional); a bit set also takes the names of its bits, comma-separated (`dpt describe`) |
 
 Unknown fields are ignored. An invalid file, address, datapoint type, flag
 or value exits 3 before anything is opened.

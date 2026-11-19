@@ -167,8 +167,10 @@ type telegramRecord struct {
 	DPT     string `json:"dpt,omitempty"`
 	Value   any    `json:"value,omitempty"`
 	Text    string `json:"text,omitempty"`
-	Error   string `json:"decodeError,omitempty"`
-	Secure  bool   `json:"secure,omitempty"`
+	// Flags are the names of the set bits of a bit set.
+	Flags  []string `json:"bitNames,omitempty"`
+	Error  string   `json:"decodeError,omitempty"`
+	Secure bool     `json:"secure,omitempty"`
 	// Dropped counts the telegrams serve dropped before this one because
 	// stdout did not take them (docs/json-output.md).
 	Dropped int64 `json:"dropped,omitempty"`
@@ -194,7 +196,7 @@ func newTelegramRecord(t client.Telegram, ty *dpt.Type) telegramRecord {
 		if ty != nil {
 			r.DPT = ty.ID.String()
 			if v, err := ty.Decode(t.Value.Data); err == nil {
-				r.Value, r.Text = jsonValue(v), ty.Format(v)
+				r.Value, r.Text, r.Flags = jsonValue(v), ty.Format(v), setFlags(ty, v)
 			} else {
 				r.Error = err.Error()
 			}
@@ -209,7 +211,7 @@ func (r telegramRecord) line() string {
 		s += " " + r.Data
 	}
 	if r.Text != "" {
-		s += " (" + r.Text + ")"
+		s += " (" + withFlags(r.Text, r.Flags) + ")"
 	}
 	if r.Error != "" {
 		s += " (undecodable: " + r.Error + ")"
@@ -262,7 +264,7 @@ func parseValue(ty *dpt.Type, raw string, small bool, value string) (apdu.GroupV
 		t, _ := dpt.Lookup("1.001")
 		ty = t
 	}
-	v, err := ty.Parse(value)
+	v, err := parseDPTValue(ty, value)
 	if err != nil {
 		return apdu.GroupValue{}, errs.New(errs.KindInvalidInput, errs.CodeInvalidValue, "%v", err)
 	}
