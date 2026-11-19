@@ -76,7 +76,7 @@ func buildDevice(dc deviceConfig) (*device.Device, error) {
 			return nil, errs.Invalid("object %q: %v", oc.Name, err)
 		}
 		if oc.Value != "" {
-			v, err := o.Type.Parse(oc.Value)
+			v, err := parseDPTValue(o.Type, oc.Value)
 			if err != nil {
 				return nil, errs.Invalid("object %q: %v", oc.Name, err)
 			}
@@ -269,7 +269,7 @@ device at --device-address, or from a JSON file (--config, docs/serve.md).`,
 					if o := objs[g]; o != nil {
 						r.DPT = o.Type.ID.String()
 						if val, err := o.Type.Decode(v.Data); err == nil {
-							r.Value, r.Text = jsonValue(val), o.Type.Format(val)
+							r.Value, r.Text, r.Flags = jsonValue(val), o.Type.Format(val), setFlags(o.Type, val)
 						}
 					}
 				}

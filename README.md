@@ -264,6 +264,9 @@ knxctl dpt list --main 9 --format table
 knxctl dpt describe 20.102
 knxctl dpt encode 10.001 'Mon 12:30:00'
 knxctl dpt decode 9.001 0C33
+knxctl dpt describe 21.100                      # the named bits of a bit set
+knxctl dpt decode 21.100 03                     # 03  0b00000011: forceRequest, protection
+knxctl dpt encode 21.100 forceRequest,protection # or bit0,bit1, or 3
 knxctl decode 061004200015040100001100bce0110a0a03010081
 knxctl decode --cemi 2900bce0110a0a03010081 --format json
 ```

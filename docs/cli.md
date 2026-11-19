@@ -325,7 +325,9 @@ Use "knxctl group [command] --help" for more information about a command.
 Send A_GroupValue_Write (transmits a telegram).
 
 The value is parsed with --dpt (see knxctl dpt list); without it a boolean
-(on/off, true/false, 1/0) is sent as DPT 1. --raw sends octets as given.
+(on/off, true/false, 1/0) is sent as DPT 1. A bit set (DPT 21, 22, 26, 30) also
+takes the names of its bits, comma-separated, or bitN (knxctl dpt describe).
+--raw sends octets as given.
 
 Usage:
   knxctl group write <group> [value] [flags]
@@ -333,6 +335,7 @@ Usage:
 Examples:
   knxctl group write 1/2/3 on --gateway 192.168.1.10
   knxctl group write 1/2/4 21.5 --dpt 9.001 --gateway 192.168.1.10
+  knxctl group write 1/2/7 forceRequest,protection --dpt 21.100 --gateway 192.168.1.10
   knxctl group write 1/2/5 --raw 0C33 --routing --source 1.1.250
 
 Flags:
@@ -375,7 +378,9 @@ Global Flags:
 Send A_GroupValue_Response (transmits a telegram).
 
 The value is parsed with --dpt (see knxctl dpt list); without it a boolean
-(on/off, true/false, 1/0) is sent as DPT 1. --raw sends octets as given.
+(on/off, true/false, 1/0) is sent as DPT 1. A bit set (DPT 21, 22, 26, 30) also
+takes the names of its bits, comma-separated, or bitN (knxctl dpt describe).
+--raw sends octets as given.
 
 Usage:
   knxctl group respond <group> [value] [flags]
@@ -788,7 +793,7 @@ Global Flags:
 ## knxctl dpt encode
 
 ```text
-Encode a value to the octets of a group telegram
+Encode a value to the octets of a group telegram. A bit set (DPT 21, 22, 26, 30) also takes the names of its bits, comma-separated, or bitN (dpt describe lists them); names match without regard to case, spaces and punctuation.
 
 Usage:
   knxctl dpt encode <dpt> <value> [flags]
@@ -797,6 +802,7 @@ Examples:
   knxctl dpt encode 9.001 21.5
   knxctl dpt encode 10.001 'Mon 12:30:00'
   knxctl dpt encode 232.600 '#FF8000'
+  knxctl dpt encode 21.100 forceRequest,protection
 
 Flags:
   -h, --help   help for encode
@@ -821,6 +827,7 @@ Usage:
 Examples:
   knxctl dpt decode 9.001 0C33
   knxctl dpt decode 1.001 01
+  knxctl dpt decode 21.001 03
 
 Flags:
   -h, --help   help for decode

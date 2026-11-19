@@ -34,7 +34,7 @@ Commands with one result write one indented document, the envelope:
 | `diagnose` | `server`, `ok`, `checks`: array of `name`, `ok`, `detail`, `ms` (checks: directed search, description, tunnelling service, tunnel connect, heartbeat, disconnect) |
 | `dpt list` | `types`: array of datapoint types (below) |
 | `dpt describe` | a datapoint type |
-| `dpt encode`, `dpt decode` | `dpt`, `data` (hex), `small`, `value`, `text` (formatted with unit) |
+| `dpt encode`, `dpt decode` | `dpt`, `data` (hex), `small`, `value`, `text` (formatted with unit), `bitNames` (a bit set: the names of its set bits, least significant first; absent when no named bit is set) |
 | `decode` | `layer` (`KNXnet/IP` or `cEMI`), `service`, `length`, `fields` (header fields of the service: `channel`, `sequence`, `status`, `control`, `data`, `discovery`, `connectionType`, `layer`, `address`, `device`, `body`, `cemiError`), `cemi` (below) |
 
 A **device** (discover, describe, decoded search and description
@@ -48,7 +48,9 @@ description blocks).
 
 A **datapoint type**: `id`, `name`, `description`, `unit`, `bits`, `kind`
 (`bool`, `float`, `enum`, ...), `min`/`max` (when the type has a range),
-`labels` (DPT 1), `values` (enumerations, `"1=comfort"`).
+`labels` (DPT 1), `values` (enumerations, `"1=comfort"`), `namedBits`
+(bit sets: array of `bit`, least significant 0, and `name`, the KNX
+master data name; bits without a name are left out).
 
 A decoded **cEMI** frame: `messageCode`, `source`, `destination`,
 `priority`, `hopCount`, `standardFrame`, `confirmError`, `tpci`, `apci`,
@@ -56,7 +58,8 @@ A decoded **cEMI** frame: `messageCode`, `source`, `destination`,
 
 **Values.** Numbers, booleans and strings decode to JSON numbers, booleans
 and strings; enumerations to `{"value": 1, "name": "comfort"}`; times,
-dates and colours to their text form (`"Mon 12:30:00"`, `"#FF8000"`).
+dates and colours to their text form (`"Mon 12:30:00"`, `"#FF8000"`);
+bit sets to a number, with the names of the set bits in `bitNames`.
 
 ## version
 
@@ -89,6 +92,7 @@ record has `"type": "telegram"`:
 | `small` | `true` when the value is a 6-bit value in the APCI octet (DPT 1, 2, 3) |
 | `dpt` | the datapoint type it was decoded with (`--map`, `--dpt`; `serve`: the object's type) |
 | `value`, `text` | the decoded value and its formatted text |
+| `bitNames` | a bit set (DPT 21, 22, 26, 30): the names of its set bits, least significant first; absent when no named bit is set |
 | `decodeError` | the value does not fit the datapoint type |
 | `dropped` | `serve` only, when stdout did not keep up: the number of telegrams dropped before this one (absent when none were) |
 
