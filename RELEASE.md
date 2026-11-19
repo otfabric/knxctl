@@ -6,6 +6,19 @@ with the version bump). It computes the tag, builds the binaries for linux
 publishes the GitHub release with the section of this file that matches the
 version as its notes. Add the section before running it.
 
+## v0.14.1
+
+**Date:** 2026-11-19
+**Previous release:** v0.14.0
+
+No command or flag is added or changed.
+
+### Changed
+
+- Built on go-knx v0.16.0 (was v0.15.0) (go-knx RELEASE.md, v0.16.0). Output and exit codes do not change. go-knx adds `dpt.Type.Flags`, the names of a bit set's bits, which `dpt` does not print yet. It also pins KNX master data version 327, whose one new subtype (253.600) it does not register. `dpt list` still lists 334 subtypes.
+
+---
+
 ## v0.14.0
 
 **Date:** 2026-11-18
